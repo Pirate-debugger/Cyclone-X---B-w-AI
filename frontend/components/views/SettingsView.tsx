@@ -5,25 +5,20 @@ import { CARTO_DEFAULT_KEY } from '../MapContainer';
 
 export const SettingsView: React.FC = () => {
   const [appMode, setAppMode] = useState<'demo' | 'live'>('demo');
-  const [selectedModel, setSelectedModel] = useState('gemini-3.7-flash');
+  const [selectedModel, setSelectedModel] = useState('gemini-3.8-flash');
   const [currentRole, setCurrentRole] = useState<'viewer' | 'operator' | 'reviewer' | 'admin'>('admin');
-  const [apiKeyInput, setApiKeyInput] = useState('demo-admin-key');
-  const [cartoKeyInput, setCartoKeyInput] = useState(CARTO_DEFAULT_KEY);
+  const [apiKeyInput, setApiKeyInput] = useState(() => (typeof window !== 'undefined' ? getApiKey() : 'demo-admin-key'));
+  const [cartoKeyInput, setCartoKeyInput] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('cyclonex_carto_api_key') || CARTO_DEFAULT_KEY;
+    }
+    return CARTO_DEFAULT_KEY;
+  });
   const [cartoStatus, setCartoStatus] = useState<'verified' | 'testing' | 'unverified'>('verified');
   const [hazardWeight, setHazardWeight] = useState(0.40);
   const [exposureWeight, setExposureWeight] = useState(0.35);
   const [vulnerabilityWeight, setVulnerabilityWeight] = useState(0.25);
   const [savedNotice, setSavedNotice] = useState<string | null>(null);
-
-  useEffect(() => {
-    setApiKeyInput(getApiKey());
-    if (typeof window !== 'undefined') {
-      const stored = localStorage.getItem('cyclonex_carto_api_key');
-      if (stored) {
-        setCartoKeyInput(stored);
-      }
-    }
-  }, []);
 
   const handleSave = () => {
     setApiKey(apiKeyInput.trim());
@@ -45,7 +40,7 @@ export const SettingsView: React.FC = () => {
         setCartoStatus('unverified');
         setSavedNotice(`CARTO Key Verification Failed (Status: ${res.status})`);
       }
-    } catch (e) {
+    } catch {
       setCartoStatus('verified'); // CORS or offline fallback
       setSavedNotice('CARTO Basemap Key saved.');
     }

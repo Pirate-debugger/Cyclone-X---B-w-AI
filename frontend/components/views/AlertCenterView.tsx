@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   BellRing, 
   CheckCircle, 
@@ -8,13 +8,19 @@ import {
   FileEdit, 
   ShieldCheck, 
   Languages, 
-  Clock, 
-  User, 
-  Plus, 
-  AlertTriangle 
+  Plus 
 } from 'lucide-react';
 import { Alert } from '../../lib/types';
 import { getAlerts, createAlertDraft, approveAlert, sendAlert, translateAdvisory } from '../../lib/api';
+
+interface TranslationMeta {
+  translation_engine?: string;
+  source_advisory_id?: string;
+  target_language?: string;
+  translated_title?: string;
+  translated_advisory_body?: string;
+  [key: string]: unknown;
+}
 
 export const AlertCenterView: React.FC = () => {
   const [alerts, setAlerts] = useState<Alert[]>([]);
@@ -22,7 +28,7 @@ export const AlertCenterView: React.FC = () => {
   const [selectedLang, setSelectedLang] = useState<'en' | 'hi' | 'or' | 'te' | 'bn'>('en');
   const [loading, setLoading] = useState(false);
   const [translating, setTranslating] = useState(false);
-  const [translationMeta, setTranslationMeta] = useState<any>(null);
+  const [translationMeta, setTranslationMeta] = useState<TranslationMeta | null>(null);
   const [dispatchStatus, setDispatchStatus] = useState<string | null>(null);
   const [showDraftModal, setShowDraftModal] = useState(false);
 
@@ -31,21 +37,19 @@ export const AlertCenterView: React.FC = () => {
   const [draftTarget, setDraftTarget] = useState('Puri South, Astaranga & Konark Coast (0-3km)');
   const [draftAction, setDraftAction] = useState('Verify MPCS shelter stock, deploy emergency boat rescue teams.');
 
-  useEffect(() => {
-    loadAlerts();
-  }, []);
-
-  const loadAlerts = async () => {
+  const loadAlerts = useCallback(async () => {
     try {
       const data = await getAlerts();
       setAlerts(data);
-      if (data.length > 0 && !selectedAlert) {
-        setSelectedAlert(data[0]);
-      }
+      setSelectedAlert(prev => prev ?? (data.length > 0 ? data[0] : null));
     } catch (e) {
       console.error(e);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    loadAlerts();
+  }, [loadAlerts]);
 
   const handleCreateDraft = async () => {
     setLoading(true);
@@ -89,8 +93,9 @@ export const AlertCenterView: React.FC = () => {
       setDispatchStatus(`Alert ${selectedAlert.id} dispatched via DRY RUN: ${res.status}`);
       await loadAlerts();
       setTimeout(() => setDispatchStatus(null), 5000);
-    } catch (e: any) {
-      alert(e.message || 'Dispatch error');
+    } catch (e) {
+      const err = e as Error;
+      alert(err.message || 'Dispatch error');
     } finally {
       setLoading(false);
     }
@@ -106,7 +111,7 @@ export const AlertCenterView: React.FC = () => {
         english_body: selectedAlert.translations?.en?.body || selectedAlert.action_notes || selectedAlert.title,
         target_language: lang
       });
-      setTranslationMeta(res);
+      setTranslationMeta(res as Record<string, unknown>);
       
       setSelectedAlert(prev => {
         if (!prev) return null;
@@ -122,7 +127,8 @@ export const AlertCenterView: React.FC = () => {
         };
       });
       setSelectedLang(lang);
-    } catch (err: any) {
+    } catch (e) {
+      const err = e as Error;
       console.error(err);
       alert('Cloud Translation API failed: ' + (err.message || ''));
     } finally {

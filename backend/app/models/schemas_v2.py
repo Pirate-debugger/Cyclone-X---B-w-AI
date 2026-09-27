@@ -13,6 +13,8 @@ class DataClassification(str, Enum):
     SCENARIO = "SCENARIO"
     AI_INTERPRETATION = "AI_INTERPRETATION"
     OFFICIAL_ADVISORY = "OFFICIAL_ADVISORY"
+    OFFICIAL_SOURCE_UNAVAILABLE = "OFFICIAL_SOURCE_UNAVAILABLE"
+    PROVIDER_UNAVAILABLE = "PROVIDER_UNAVAILABLE"
     DEMO = "DEMO"
 
 class FreshnessState(str, Enum):
@@ -239,18 +241,19 @@ class OfficialForecastPoint(BaseModel):
 class OfficialForecastRun(BaseModel):
     event_id: str
     cyclone_name: str
-    bulletin_number: int
+    bulletin_number: Optional[int] = 0
     bulletin_time: str
-    next_bulletin_time: str
+    next_bulletin_time: Optional[str] = None
     warning_status: str
     advisory_text: str
-    observed_lat: float
-    observed_lon: float
-    current_intensity_kmh: float
-    central_pressure_hpa: float
-    estimated_landfall_sector: str
-    estimated_landfall_time: str
-    forecast_points: List[OfficialForecastPoint]
+    observed_lat: Optional[float] = None
+    observed_lon: Optional[float] = None
+    current_intensity_kmh: Optional[float] = None
+    central_pressure_hpa: Optional[float] = None
+    estimated_landfall_sector: Optional[str] = None
+    estimated_landfall_time: Optional[str] = None
+    forecast_points: List[OfficialForecastPoint] = []
+    status: str = "AVAILABLE"
     official_source: str = "India Meteorological Department (RSMC New Delhi)"
     official_source_url: str = "https://mausam.imd.gov.in/cyclone"
     classification: DataClassification = DataClassification.OFFICIAL_ADVISORY

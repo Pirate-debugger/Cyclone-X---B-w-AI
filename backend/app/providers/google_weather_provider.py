@@ -114,13 +114,14 @@ class GoogleWeatherProvider(WeatherProvider):
                 wind_direction_deg=round((100.0 + i * 4.0) % 360, 1)
             ))
 
+        fallback_source = "DEMO_WEATHER_BASELINE" if settings.APP_MODE == "demo" else "PROVIDER_UNAVAILABLE"
         result = WeatherData(
             event_id=event_id or "cyclone-alpha",
-            source="GOOGLE WEATHER API",
+            source=fallback_source,
             retrieved_at=now_dt.strftime("%Y-%m-%dT%H:00:00Z"),
             valid_until=datetime.fromtimestamp(now_dt.timestamp() + 21600, tz=timezone.utc).strftime("%Y-%m-%dT%H:00:00Z"),
-            freshness="CALIBRATED BASELINE",
-            confidence=88.0,
+            freshness="DEMO BASELINE" if settings.APP_MODE == "demo" else "UNAVAILABLE",
+            confidence=88.0 if settings.APP_MODE == "demo" else 0.0,
             stations=[StationWeather(
                 station_id=f"GW-LOC-{round(latitude,2)}-{round(longitude,2)}",
                 name=f"Coastal Weather Station ({round(latitude,2)}°N, {round(longitude,2)}°E)",

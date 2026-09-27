@@ -17,9 +17,12 @@ class Settings(BaseSettings):
     # API & Server
     HOST: str = os.getenv("HOST", "0.0.0.0")
     PORT: int = int(os.getenv("PORT", "8000"))
-    CORS_ORIGINS: List[str] = ["*"]
-    
-    # Database & Cache
+    CORS_ORIGINS: List[str] = [
+        o.strip() for o in os.getenv(
+            "CORS_ORIGINS", 
+            "http://localhost:3000,http://127.0.0.1:3000,http://localhost:8000,http://127.0.0.1:8000,https://cyclonex.app"
+        ).split(",") if o.strip()
+    ]
     DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite:///./cyclonex.db")
     REDIS_URL: str = os.getenv("REDIS_URL", "redis://localhost:6379/0")
     

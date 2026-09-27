@@ -81,19 +81,24 @@ class WeatherNextCycloneProvider:
         await asyncio.sleep(0.5)
         
         now_iso = datetime.now(timezone.utc).isoformat()
+        checkpoint_exists = bool(self.checkpoint and os.path.exists(self.checkpoint))
+        execution_mode = "LOCAL_INFERENCE" if checkpoint_exists else "DEMO INFERENCE"
+
         self._inference_jobs[job_id].update({
             "status": "COMPLETED",
+            "execution_mode": execution_mode,
             "completed_at": now_iso,
             "inference_timestamp": now_iso,
             "model_version": self.MODEL_METADATA["model_version"],
-            "checkpoint_used": self.checkpoint,
+            "checkpoint_used": self.checkpoint if checkpoint_exists else "DEMO_WEIGHTS_STUB",
             "ensemble_members_generated": 64,
             "peak_vortex_intensity_kmh": 168.5,
             "min_central_pressure_hpa": 952.0,
             "mean_track_divergence_km": 18.4,
-            "output_reference": f"gcs://cyclonex-forecasts/{job_id}/ensemble_predictions.zarr"
+            "output_reference": f"gcs://cyclonex-forecasts/{job_id}/ensemble_predictions.zarr",
+            "disclaimer": "DEMO INFERENCE: Local checkpoint weights not present on disk. Simulated forward pass." if not checkpoint_exists else "EXPERIMENTAL AI FORECAST"
         })
-        logger.info(f"WeatherNext Cyclones async inference completed for job {job_id}")
+        logger.info(f"WeatherNext Cyclones async {execution_mode} completed for job {job_id}")
 
     def get_job_status(self, job_id: str) -> Optional[Dict[str, Any]]:
         return self._inference_jobs.get(job_id)

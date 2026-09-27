@@ -31,14 +31,10 @@ class VertexAIImpactProvider:
         self.location = settings.VERTEX_AI_LOCATION
         self.serving_mode = self._determine_serving_mode()
 
-    def _determine_determine_serving_mode(self) -> str:
-        if self.endpoint_id and self.project:
+    def _determine_serving_mode(self) -> str:
+        if self.endpoint_id and self.project and not self.endpoint_id.startswith("demo"):
             return "VERTEX_ENDPOINT"
-        if settings.APP_MODE == "live":
-            return "LOCAL_BASELINE"
-        return "DEMO"
-
-    _determine_serving_mode = _determine_determine_serving_mode
+        return "RESEARCH_DEMO_BASELINE"
 
     def predict_asset_impact(
         self,
@@ -122,10 +118,11 @@ class VertexAIImpactProvider:
             "calibration_error": 0.031
         }
 
+        is_real_vertex = self.serving_mode == "VERTEX_ENDPOINT"
         return VertexPredictionResult(
-            model_name=self.MODEL_NAME,
+            model_name=self.MODEL_NAME if is_real_vertex else "RESEARCH / DEMO BASELINE",
             model_version=self.MODEL_VERSION,
-            model_endpoint=self.endpoint_id or "local-vertex-baseline",
+            model_endpoint=f"projects/{self.project}/locations/{self.location}/endpoints/{self.endpoint_id}" if is_real_vertex else "NOT_CONFIGURED (Local Research Baseline)",
             serving_mode=self.serving_mode,
             prediction_timestamp=now_str,
             input_run_id=input_run_id,
@@ -136,7 +133,7 @@ class VertexAIImpactProvider:
             p_combined_impact=p_combined,
             confidence_interval=conf_int,
             metrics_evaluated=metrics,
-            classification=DataClassification.MODEL_OUTPUT
+            classification=DataClassification.MODEL_OUTPUT if is_real_vertex else DataClassification.DEMO
         )
 
 

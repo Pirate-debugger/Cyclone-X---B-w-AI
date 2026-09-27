@@ -3,16 +3,12 @@
 import React, { useState } from 'react';
 import { 
   Mic, 
-  MicOff, 
   Volume2, 
   Sparkles, 
   X, 
   ArrowRight, 
   Radio, 
-  CheckCircle2, 
-  AlertTriangle,
-  Play,
-  RotateCcw
+  CheckCircle2 
 } from 'lucide-react';
 import { sendVoiceCommand } from '../lib/api';
 import { NavTab } from './NavigationSidebar';
@@ -230,7 +226,7 @@ export const VoiceCommandModal: React.FC<VoiceCommandModalProps> = ({
                   <Sparkles className="w-3.5 h-3.5 text-cyan-400 shrink-0 mt-0.5" />
                   <div className="flex-1">
                     <p className="text-xs text-slate-200 group-hover:text-cyan-300 font-medium leading-snug">
-                      "{cmd.text}"
+                      &quot;{cmd.text}&quot;
                     </p>
                     <span className="text-[10px] text-slate-500 font-mono">
                       Navigates to: {cmd.tab}

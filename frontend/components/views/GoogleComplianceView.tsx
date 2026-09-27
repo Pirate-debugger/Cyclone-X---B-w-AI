@@ -58,13 +58,26 @@ export const GoogleComplianceView: React.FC = () => {
 
   const getStatusBadge = (status: string) => {
     const isConn = status.includes('CONNECTED');
+    const isDeployed = status.includes('DEPLOYED');
+    const isNotConfig = status.includes('NOT CONFIGURED') || status.includes('NOT_CONFIGURED');
+    
+    let colorClass = 'bg-cyan-500/10 text-cyan-400 border-cyan-500/30';
+    let dotClass = 'bg-cyan-400';
+
+    if (isConn) {
+      colorClass = 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30';
+      dotClass = 'bg-emerald-400 animate-pulse';
+    } else if (isDeployed) {
+      colorClass = 'bg-blue-500/10 text-blue-400 border-blue-500/30';
+      dotClass = 'bg-blue-400';
+    } else if (isNotConfig) {
+      colorClass = 'bg-rose-500/10 text-rose-400 border-rose-500/30';
+      dotClass = 'bg-rose-400';
+    }
+
     return (
-      <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold tracking-wide flex items-center gap-1.5 ${
-        isConn
-          ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
-          : 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/30'
-      }`}>
-        <span className={`w-1.5 h-1.5 rounded-full ${isConn ? 'bg-emerald-400 animate-pulse' : 'bg-cyan-400'}`}></span>
+      <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold tracking-wide flex items-center gap-1.5 border ${colorClass}`}>
+        <span className={`w-1.5 h-1.5 rounded-full ${dotClass}`}></span>
         {status}
       </span>
     );

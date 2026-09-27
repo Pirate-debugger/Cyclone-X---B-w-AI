@@ -23,7 +23,17 @@ import {
   DataQualityReport
 } from './types';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+const getApiBase = (): string => {
+  if (process.env.NEXT_PUBLIC_API_URL && !process.env.NEXT_PUBLIC_API_URL.includes('backend:8000')) {
+    return process.env.NEXT_PUBLIC_API_URL.replace(/\/$/, '');
+  }
+  // In the browser, always use relative path so Next.js rewrites proxy to backend
+  if (typeof window !== 'undefined') {
+    return '';
+  }
+  return (process.env.INTERNAL_BACKEND_URL || 'http://127.0.0.1:8000').replace(/\/$/, '');
+};
+
 const DEFAULT_API_KEY = process.env.NEXT_PUBLIC_API_KEY || 'demo-operator-key';
 
 export function getApiKey(): string {
@@ -39,31 +49,79 @@ export function setApiKey(key: string): void {
   }
 }
 
-async function fetchJson<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-  const url = `${API_BASE}${endpoint}`;
+async function fetchJson<T>(endpoint: string, options: RequestInit = {}, timeoutMs = 20000, retryCount = 1): Promise<T> {
+  const base = getApiBase();
+  const url = `${base}${endpoint}`;
   const apiKey = getApiKey();
+  const requestId = `client-${Math.random().toString(36).substring(2, 10)}`;
   
   const headers = new Headers(options.headers || {});
   headers.set('Content-Type', 'application/json');
+  headers.set('X-Request-ID', requestId);
   if (apiKey) {
     headers.set('X-API-Key', apiKey);
   }
 
-  const response = await fetch(url, {
-    ...options,
-    headers,
-  });
+  const isSafeGet = !options.method || options.method.toUpperCase() === 'GET';
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`API error (${response.status}): ${errorText || response.statusText}`);
+  for (let attempt = 0; attempt <= (isSafeGet ? retryCount : 0); attempt++) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+    try {
+      const response = await fetch(url, {
+        ...options,
+        headers,
+        signal: options.signal || controller.signal,
+      });
+
+      if (!response.ok) {
+        let errorJson: any = null;
+        try {
+          errorJson = await response.json();
+        } catch {
+          // Non-JSON response
+        }
+        
+        // Retry safe GET requests on 502/503/504 if attempts remain
+        if (isSafeGet && [502, 503, 504].includes(response.status) && attempt < retryCount) {
+          clearTimeout(timeoutId);
+          await new Promise(r => setTimeout(r, 600));
+          continue;
+        }
+
+        const message = errorJson?.error?.message || errorJson?.detail || response.statusText;
+        const err: any = new Error(`API Error [${response.status}] on ${endpoint}: ${message}`);
+        err.status = response.status;
+        err.code = errorJson?.error?.code || `HTTP_${response.status}`;
+        err.provider = errorJson?.error?.provider || 'CYCLONE-X API';
+        err.requestId = errorJson?.error?.request_id || requestId;
+        err.data = errorJson;
+        throw err;
+      }
+
+      const json = await response.json();
+      if (json && typeof json === 'object' && 'data' in json) {
+        return json.data as T;
+      }
+      return json as T;
+    } catch (err: any) {
+      if (err.name === 'AbortError') {
+        throw new Error(`Request to ${endpoint} timed out after ${timeoutMs}ms (Request ID: ${requestId})`);
+      }
+      // Retry safe GET requests on network failures
+      if (isSafeGet && attempt < retryCount && !err.status) {
+        clearTimeout(timeoutId);
+        await new Promise(r => setTimeout(r, 600));
+        continue;
+      }
+      throw err;
+    } finally {
+      clearTimeout(timeoutId);
+    }
   }
 
-  const json = await response.json();
-  if (json && typeof json === 'object' && 'data' in json) {
-    return json.data as T;
-  }
-  return json as T;
+  throw new Error(`Failed to complete request to ${endpoint}`);
 }
 
 // --- Baseline Endpoints ---
@@ -164,7 +222,7 @@ export async function getDataSources(): Promise<any> {
 }
 
 export function getReportDownloadUrl(reportId: string, format = 'pdf'): string {
-  return `${API_BASE}/api/reports/${reportId}/export?format=${format}`;
+  return `${getApiBase()}/api/reports/${reportId}/export?format=${format}`;
 }
 
 // ==========================================

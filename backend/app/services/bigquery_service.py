@@ -68,7 +68,8 @@ class BigQueryAnalyticsService:
         """Provides status and architectural overview of BigQuery datasets."""
         return {
             "project_id": self.project or "local-demo-project",
-            "status": "CONNECTED" if self.is_live() else "READY (DEMO ARCHITECTURE)",
+            "status": "CONNECTED" if self.is_live() else "NOT_CONFIGURED",
+            "classification": "ANALYTICS" if self.is_live() else "DEMO",
             "datasets": [
                 {
                     "dataset_id": ds,

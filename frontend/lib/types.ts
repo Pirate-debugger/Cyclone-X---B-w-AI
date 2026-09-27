@@ -372,6 +372,7 @@ export interface ForecastMember {
   r34_km?: number;
   r50_km?: number;
   r64_km?: number;
+  points?: Array<{ latitude: number; longitude: number; step_hours?: number; wind_speed_kmh?: number }>;
   source: string;
   classification: string;
 }
@@ -391,6 +392,7 @@ export interface PercentileCurve {
 export interface LandfallSectorProbability {
   sector_id: string;
   name: string;
+  sector_name?: string;
   state_district: string;
   coastline_geojson: any;
   probability_pct: number;
@@ -415,6 +417,9 @@ export interface EnsembleAggregationResult {
   along_track_spread_km: number;
   cross_track_spread_km: number;
   forecast_confidence_pct: number;
+  prob_wind_exceed_100kmh?: number;
+  landfall_probability_pct?: number;
+  consensus_confidence_pct?: number;
   primary_divergence_notes: string;
   classification: string;
 }
@@ -499,6 +504,7 @@ export interface HazardFieldsOverview {
 export interface AssetImpactProbability {
   asset_id: string;
   name: string;
+  asset_name?: string;
   type: string;
   criticality: number;
   elevation_m: number;

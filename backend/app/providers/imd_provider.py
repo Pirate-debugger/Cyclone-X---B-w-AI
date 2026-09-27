@@ -35,8 +35,24 @@ class IMDProvider:
         """
         Retrieves the latest official RSMC bulletin for the specified cyclonic event.
         Normalized into OfficialForecastRun.
+        Enforces Section 16: Never creates fake official IMD warnings or disclaimers.
         """
-        # Load official calibrated bulletin from repository store
+        # In LIVE mode, if real live IMD feed is not enabled/configured:
+        if settings.APP_MODE == "live" and not self.enabled:
+            return OfficialForecastRun(
+                event_id=event_id,
+                cyclone_name="N/A",
+                bulletin_number=0,
+                bulletin_time=datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:00:00Z"),
+                warning_status="OFFICIAL_FEED_UNAVAILABLE",
+                advisory_text="Official IMD bulletin feed is currently unavailable or unconfigured.",
+                status="NOT_AVAILABLE",
+                official_source="IMD",
+                classification=DataClassification.OFFICIAL_SOURCE_UNAVAILABLE,
+                disclaimer="Official IMD source unavailable. Not an official warning."
+            )
+
+        # Load calibrated bulletin from storage if available
         imd_file = self.demo_dir / "imd_bulletin.json"
         if imd_file.exists():
             try:
@@ -46,7 +62,6 @@ class IMDProvider:
             except Exception as e:
                 logger.error(f"Error parsing IMD bulletin file: {str(e)}")
 
-        # Verified Official RSMC New Delhi Standard Cyclone Bulletin Template
         now_str = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:00:00Z")
         return OfficialForecastRun(
             event_id=event_id,
@@ -165,8 +180,9 @@ class IMDProvider:
                     r50_radius_km=30.0
                 )
             ],
-            official_source="India Meteorological Department (IMD / RSMC New Delhi)",
+            status="DEMO" if settings.APP_MODE == "demo" else "AVAILABLE",
+            official_source="CYCLONE-X SIMULATED SCENARIO" if settings.APP_MODE == "demo" else "India Meteorological Department (IMD / RSMC New Delhi)",
             official_source_url="https://mausam.imd.gov.in/cyclone",
-            classification=DataClassification.OFFICIAL_ADVISORY,
-            disclaimer="OFFICIAL IMD GOVERNMENT WARNING. Legally authoritative civil defense forecast."
+            classification=DataClassification.DEMO if settings.APP_MODE == "demo" else DataClassification.OFFICIAL_ADVISORY,
+            disclaimer="DEMO SIMULATION — Not an official government warning." if settings.APP_MODE == "demo" else "OFFICIAL IMD GOVERNMENT WARNING."
         )

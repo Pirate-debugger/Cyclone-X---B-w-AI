@@ -1,6 +1,6 @@
 import time
 import uuid
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from app.core.config import settings
@@ -71,14 +71,30 @@ async def add_process_time_and_logging(request: Request, call_next):
             status_code=500,
             content={
                 "success": False,
-                "data": None,
                 "error": {
                     "code": "INTERNAL_SERVER_ERROR",
                     "message": "An internal server error occurred.",
+                    "provider": "CYCLONE-X CORE",
                     "request_id": request_id
                 }
             }
         )
+
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
+    request_id = request.headers.get("X-Request-ID", f"req-{uuid.uuid4().hex[:8]}")
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={
+            "success": False,
+            "error": {
+                "code": f"HTTP_{exc.status_code}",
+                "message": exc.detail if isinstance(exc.detail, str) else str(exc.detail),
+                "provider": "CYCLONE-X API",
+                "request_id": request_id
+            }
+        }
+    )
 
 # Register API routes under /api
 app.include_router(system_router, prefix="/api")

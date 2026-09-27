@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   ShieldAlert, 
+  ShieldCheck,
   Activity, 
   Clock, 
   Compass, 
@@ -22,6 +23,7 @@ interface CommandHeaderProps {
   onOpenDataHealth?: () => void;
   onOpenCopilot?: () => void;
   onOpenVoice?: () => void;
+  onOpenEvidence?: () => void;
   isDemo?: boolean;
   eventTitle?: string;
   latestRunId?: string;
@@ -33,6 +35,7 @@ export const CommandHeader: React.FC<CommandHeaderProps> = ({
   onOpenDataHealth,
   onOpenCopilot,
   onOpenVoice,
+  onOpenEvidence,
   isDemo = true,
   eventTitle = "TC-2026-ALPHA (Bay of Bengal)",
   latestRunId = "RUN-18Z",
@@ -134,6 +137,15 @@ export const CommandHeader: React.FC<CommandHeaderProps> = ({
           <Activity className="w-3.5 h-3.5 text-emerald-400" />
           <span className="font-mono text-[11px]">DATA HEALTH</span>
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+        </button>
+
+        <button 
+          onClick={onOpenEvidence}
+          className="flex items-center gap-1.5 bg-[#0f172a] hover:bg-[#1e293b] border border-cyan-800/80 text-cyan-300 px-2.5 py-1 rounded transition-colors"
+          title="Inspect scientific evidence, data classification & provenance"
+        >
+          <ShieldCheck className="w-3.5 h-3.5 text-cyan-400" />
+          <span className="font-mono text-[11px]">EVIDENCE</span>
         </button>
 
         <div className="hidden sm:flex items-center gap-1 bg-[#0f172a] border border-[#1e293b] px-2 py-1 rounded text-slate-300">

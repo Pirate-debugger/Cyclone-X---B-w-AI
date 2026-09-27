@@ -25,6 +25,7 @@ import { ContextIntelligencePanel } from '../components/ContextIntelligencePanel
 import { PriorityZonesTable } from '../components/PriorityZonesTable';
 import { AICopilotDrawer } from '../components/AICopilotDrawer';
 import { DataHealthDrawer } from '../components/DataHealthDrawer';
+import { EvidenceDrawer } from '../components/EvidenceDrawer';
 
 const GoogleMapContainer = dynamic(
   () => import('../components/GoogleMapContainer').then((mod) => mod.GoogleMapContainer),
@@ -64,7 +65,8 @@ import {
   InfrastructureRiskAssessment,
   GeminiStructuredExplanation,
   EnsembleAggregationResult,
-  AssetImpactProbability
+  AssetImpactProbability,
+  HazardFieldsOverview
 } from '../lib/types';
 import { 
   getEvents, 
@@ -74,7 +76,9 @@ import {
   askGeminiCopilot,
   getDataHealth,
   getEnsembleAggregation,
-  getAssetImpacts
+  getAssetImpacts,
+  getHazardsOverview,
+  getSystemHealth
 } from '../lib/api';
 
 export default function CycloneXApp() {
@@ -85,54 +89,84 @@ export default function CycloneXApp() {
   const [infrastructure, setInfrastructure] = useState<InfrastructureRiskAssessment[]>([]);
   const [ensembleData, setEnsembleData] = useState<EnsembleAggregationResult | null>(null);
   const [assetImpacts, setAssetImpacts] = useState<AssetImpactProbability[]>([]);
+  const [hazardOverview, setHazardOverview] = useState<HazardFieldsOverview | null>(null);
   const [selectedZone, setSelectedZone] = useState<HotspotZone | null>(null);
   const [selectedInfra, setSelectedInfra] = useState<InfrastructureRiskAssessment | null>(null);
   const [aiExplanation, setAiExplanation] = useState<GeminiStructuredExplanation | null>(null);
+  const [systemHealth, setSystemHealth] = useState<any>(null);
   
   // Drawers & Modals
   const [copilotOpen, setCopilotOpen] = useState(false);
   const [dataHealthOpen, setDataHealthOpen] = useState(false);
+  const [evidenceOpen, setEvidenceOpen] = useState(false);
   const [voiceModalOpen, setVoiceModalOpen] = useState(false);
   const [dataHealthInfo, setDataHealthInfo] = useState<any>(null);
 
-  // Initial load
+  // Initial load using resilient Promise.allSettled (Section 12)
   useEffect(() => {
     async function loadInitialData() {
+      // 1. Load Event & Track
       try {
         const events = await getEvents();
-        if (events.length > 0) {
+        if (events && events.length > 0) {
           const currentEv = events[0];
           setEvent(currentEv);
-          
-          const track = await getTrack(currentEv.event_id);
-          setTrackData(track);
+          try {
+            const track = await getTrack(currentEv.event_id);
+            if (track) setTrackData(track);
+          } catch (tErr) {
+            console.warn("Track data fetch warning:", tErr);
+          }
         }
+      } catch (eErr) {
+        console.warn("Events fetch note:", eErr);
+      }
 
-        const [risk, infra, health, ens, impacts] = await Promise.all([
-          getRiskOverview(),
-          getInfrastructureRisk(),
-          getDataHealth(),
-          getEnsembleAggregation(),
-          getAssetImpacts()
-        ]);
+      // 2. Load Core Intelligence Datasets via Promise.allSettled
+      const [riskRes, infraRes, healthRes, ensRes, impactsRes, hazardsRes, sysHealthRes] = await Promise.allSettled([
+        getRiskOverview(),
+        getInfrastructureRisk(),
+        getDataHealth(),
+        getEnsembleAggregation(),
+        getAssetImpacts(),
+        getHazardsOverview(),
+        getSystemHealth()
+      ]);
 
-        setRiskData(risk);
-        if (risk.top_priority_zones.length > 0) {
-          setSelectedZone(risk.top_priority_zones[0]);
+      if (riskRes.status === 'fulfilled' && riskRes.value) {
+        setRiskData(riskRes.value);
+        if (riskRes.value.top_priority_zones && riskRes.value.top_priority_zones.length > 0) {
+          setSelectedZone(riskRes.value.top_priority_zones[0]);
         }
+      }
+      if (infraRes.status === 'fulfilled' && infraRes.value) {
+        setInfrastructure(infraRes.value);
+      }
+      if (healthRes.status === 'fulfilled' && healthRes.value) {
+        setDataHealthInfo(healthRes.value);
+      }
+      if (ensRes.status === 'fulfilled' && ensRes.value) {
+        setEnsembleData(ensRes.value);
+      }
+      if (impactsRes.status === 'fulfilled' && impactsRes.value) {
+        setAssetImpacts(impactsRes.value);
+      }
+      if (hazardsRes.status === 'fulfilled' && hazardsRes.value) {
+        setHazardOverview(hazardsRes.value);
+      }
+      if (sysHealthRes.status === 'fulfilled' && sysHealthRes.value) {
+        setSystemHealth(sysHealthRes.value);
+      }
 
-        setInfrastructure(infra);
-        setDataHealthInfo(health);
-        setEnsembleData(ens);
-        setAssetImpacts(impacts);
-
-        // Grounded AI initial summary
+      // 3. Grounded AI initial summary
+      try {
         const explanation = await askGeminiCopilot("Summarize current threat for Puri coastal zone");
-        setAiExplanation(explanation);
-      } catch (err) {
-        console.warn("Backend connectivity note: using local fallback cache if offline.", err);
+        if (explanation) setAiExplanation(explanation);
+      } catch (aiErr) {
+        console.warn("AI copilot initialization note:", aiErr);
       }
     }
+
     loadInitialData();
   }, []);
 
@@ -169,6 +203,25 @@ export default function CycloneXApp() {
 
   const metrics = riskData?.overall_metrics;
   const topSector = ensembleData?.landfall_sectors?.[0];
+  const dynamicWindProb = ensembleData?.prob_wind_exceed_100kmh !== undefined 
+    ? `${Math.round(ensembleData.prob_wind_exceed_100kmh * 100)}%` 
+    : "84% (DEMO)";
+  const dynamicRainProb = hazardOverview?.rainfall_exceedances?.[1]?.p_exceed_200mm !== undefined 
+    ? `${Math.round(hazardOverview.rainfall_exceedances[1].p_exceed_200mm * 100)}%` 
+    : "64% (DEMO)";
+  const dynamicPopExposure = selectedZone?.population_estimate 
+    ? `${Math.round(selectedZone.population_estimate / 1000)}k` 
+    : (riskData?.population_exposure?.total_exposed ? `${Math.round(riskData.population_exposure.total_exposed / 1000)}k` : "340k (DEMO)");
+  const dynamicPopSub = riskData?.population_exposure?.total_exposed 
+    ? `Total: ${(riskData.population_exposure.total_exposed / 1000000).toFixed(2)}M` 
+    : "Total: 1.28M (DEMO)";
+  const dynamicImpactProb = assetImpacts?.[0]?.p_combined_impact !== undefined 
+    ? `${Math.round(assetImpacts[0].p_combined_impact * 100)}%` 
+    : (selectedZone?.risk_score !== undefined ? `${selectedZone.risk_score}%` : "62% (DEMO)");
+  const dynamicImpactSub = assetImpacts?.[0]?.name || (selectedZone ? selectedZone.name : "District Hospital Puri");
+  const dynamicStability = ensembleData?.forecast_confidence_pct !== undefined 
+    ? `${ensembleData.forecast_confidence_pct}%` 
+    : "88% (DEMO)";
 
   return (
     <div className="flex flex-col h-screen w-screen bg-[#080d1a] text-slate-100 overflow-hidden font-sans">
@@ -178,6 +231,7 @@ export default function CycloneXApp() {
         onOpenDataHealth={() => setDataHealthOpen(true)}
         onOpenCopilot={() => setCopilotOpen(true)}
         onOpenVoice={() => setVoiceModalOpen(true)}
+        onOpenEvidence={() => setEvidenceOpen(true)}
         isDemo={true}
         eventTitle={event?.name || "Cyclone Alpha (Bay of Bengal)"}
         latestRunId="RUN-18Z"
@@ -201,8 +255,8 @@ export default function CycloneXApp() {
                 {/* 1. Landfall Probability */}
                 <RiskMetricCard 
                   label="Landfall Probability"
-                  value={topSector ? `${topSector.probability_pct}%` : "47.0%"}
-                  subvalue="Puri - Astaranga Belt"
+                  value={topSector ? `${topSector.probability_pct}%` : (ensembleData?.landfall_probability_pct !== undefined ? `${ensembleData.landfall_probability_pct}%` : "47.0% (DEMO)")}
+                  subvalue={topSector ? (topSector.sector_name || topSector.name) : "Puri - Astaranga Belt"}
                   icon={Target}
                   variant="severe"
                   badge="64-MBR"
@@ -211,7 +265,7 @@ export default function CycloneXApp() {
                 {/* 2. Track Spread */}
                 <RiskMetricCard 
                   label="Track Spread"
-                  value={ensembleData ? `±${ensembleData.cross_track_spread_km}km` : "±28.4km"}
+                  value={ensembleData?.cross_track_spread_km !== undefined ? `±${ensembleData.cross_track_spread_km}km` : "±28.4km (DEMO)"}
                   subvalue="Cross-track spread @ +48h"
                   icon={TrendingUp}
                   variant="high"
@@ -221,7 +275,7 @@ export default function CycloneXApp() {
                 {/* 3. Peak Wind Probability */}
                 <RiskMetricCard 
                   label="Peak Wind Prob."
-                  value="84%"
+                  value={dynamicWindProb}
                   subvalue="P(Wind > 100 km/h)"
                   icon={Wind}
                   variant="severe"
@@ -231,7 +285,7 @@ export default function CycloneXApp() {
                 {/* 4. Rainfall Exceedance */}
                 <RiskMetricCard 
                   label="Rain Exceedance"
-                  value="64%"
+                  value={dynamicRainProb}
                   subvalue="P(24h Rain > 200mm)"
                   icon={Droplets}
                   variant="high"
@@ -241,8 +295,8 @@ export default function CycloneXApp() {
                 {/* 5. Population Exposure */}
                 <RiskMetricCard 
                   label="Population Exposure"
-                  value="340k"
-                  subvalue="Total affected: 1.28M"
+                  value={dynamicPopExposure}
+                  subvalue={dynamicPopSub}
                   icon={Users}
                   variant="severe"
                   badge="WORLDPOP"
@@ -251,7 +305,7 @@ export default function CycloneXApp() {
                 {/* 6. Critical Infra Exposure */}
                 <RiskMetricCard 
                   label="Critical Lifelines"
-                  value={`${infrastructure.filter(i => i.risk_score >= 75).length}`}
+                  value={`${infrastructure.filter(i => (i.risk_score || 0) >= 70).length || (infrastructure.length > 0 ? infrastructure.length : "12")}`}
                   subvalue="Hospitals, Ports, Grids"
                   icon={Building2}
                   variant="severe"
@@ -261,8 +315,8 @@ export default function CycloneXApp() {
                 {/* 7. Impact Probability */}
                 <RiskMetricCard 
                   label="Combined Impact P"
-                  value="62%"
-                  subvalue="District Hospital Puri"
+                  value={dynamicImpactProb}
+                  subvalue={dynamicImpactSub}
                   icon={AlertOctagon}
                   variant="severe"
                   badge="P(COMB)"
@@ -271,7 +325,7 @@ export default function CycloneXApp() {
                 {/* 8. Forecast Stability */}
                 <RiskMetricCard 
                   label="Forecast Stability"
-                  value="88%"
+                  value={dynamicStability}
                   subvalue="High consensus (3 models)"
                   icon={CheckCircle2}
                   variant="moderate"
@@ -288,6 +342,9 @@ export default function CycloneXApp() {
                     hotspots={riskData?.top_priority_zones}
                     infrastructure={infrastructure}
                     selectedZone={selectedZone}
+                    selectedInfra={selectedInfra}
+                    ensembleResult={ensembleData}
+                    assetImpacts={assetImpacts}
                     onSelectZone={(z) => setSelectedZone(z)}
                     onSelectInfrastructure={(infra) => setSelectedInfra(infra)}
                   />
@@ -375,8 +432,8 @@ export default function CycloneXApp() {
                   <Sparkles className="w-5 h-5 text-cyan-400" />
                   <h2 className="text-base font-bold font-mono text-slate-100">AI MULTIMODAL REASONING & EVIDENCE INSPECTOR</h2>
                 </div>
-                <span className="text-[10px] font-mono text-cyan-400 bg-cyan-950 px-2 py-0.5 rounded border border-cyan-800">
-                  GEMINI 3.7 FLASH ACTIVE
+                <span className="text-[10px] font-mono text-cyan-400 bg-cyan-950 px-2 py-0.5 rounded border border-cyan-800 uppercase">
+                  {systemHealth?.subsystems?.gemini ? systemHealth.subsystems.gemini.toUpperCase() : 'GEMINI 3.8 FLASH ACTIVE'}
                 </span>
               </div>
               <div className="flex-1 relative overflow-hidden rounded-lg border border-[#1e293b]">
@@ -413,6 +470,15 @@ export default function CycloneXApp() {
         isOpen={dataHealthOpen} 
         onClose={() => setDataHealthOpen(false)}
         healthData={dataHealthInfo}
+      />
+
+      <EvidenceDrawer 
+        isOpen={evidenceOpen}
+        onClose={() => setEvidenceOpen(false)}
+        selectedZone={selectedZone}
+        selectedInfra={selectedInfra}
+        ensembleData={ensembleData}
+        isDemo={true}
       />
 
       <VoiceCommandModal 

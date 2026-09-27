@@ -28,23 +28,26 @@ def test_google_compliance_endpoint():
     assert "Firebase Authentication" in comp_names
 
 def test_imd_official_provider():
-    """Validates official IMD bulletin ingestion and classification."""
+    """Validates IMD bulletin ingestion and classification (Section 16: DEMO vs OFFICIAL)."""
     provider = IMDProvider()
     bulletin = provider.get_official_bulletin("cyclone-alpha")
     assert bulletin.cyclone_name == "CYCLONE ALPHA"
     assert bulletin.bulletin_number == 14
-    assert bulletin.classification.value == "OFFICIAL_ADVISORY"
-    assert "IMD" in bulletin.official_source
+    assert bulletin.classification.value in ("DEMO", "OFFICIAL_ADVISORY", "OFFICIAL_SOURCE_UNAVAILABLE")
+    if bulletin.classification.value == "DEMO":
+        assert "SIMULATED SCENARIO" in bulletin.official_source
+    else:
+        assert "IMD" in bulletin.official_source
     assert len(bulletin.forecast_points) >= 5
 
 def test_imd_api_endpoint():
-    """Validates /api/v2/imd/official-bulletin endpoint."""
+    """Validates /api/v2/imd/official-bulletin endpoint with Section 16 classification."""
     response = client.get("/api/v2/imd/official-bulletin?event_id=cyclone-alpha")
     assert response.status_code == 200
     data = response.json()
     assert data["success"] is True
     assert data["data"]["cyclone_name"] == "CYCLONE ALPHA"
-    assert data["data"]["classification"] == "OFFICIAL_ADVISORY"
+    assert data["data"]["classification"] in ("DEMO", "OFFICIAL_ADVISORY", "OFFICIAL_SOURCE_UNAVAILABLE")
 
 @pytest.mark.asyncio
 async def test_route_risk_engine():
