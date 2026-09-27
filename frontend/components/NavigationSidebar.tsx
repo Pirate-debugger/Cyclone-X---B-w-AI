@@ -20,6 +20,8 @@ import {
 
 export type NavTab = 
   | 'command-center'
+  | 'google-stack'
+  | 'route-risk'
   | 'forecast-evolution'
   | 'model-comparison'
   | 'verification'
@@ -45,6 +47,8 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
 }) => {
   const navItems = [
     { id: 'command-center', label: 'Command Center', icon: LayoutDashboard, badge: 'EOC' },
+    { id: 'google-stack', label: 'Google Tech Stack', icon: CheckCircle2, badge: 'Google' },
+    { id: 'route-risk', label: 'Route Risk', icon: ShieldAlert, badge: 'Routes' },
     { id: 'forecast-evolution', label: 'Forecast Evolution', icon: History, badge: '00Z-18Z' },
     { id: 'model-comparison', label: 'Model Consensus', icon: GitCompare, badge: 'Ensemble' },
     { id: 'early-actions', label: 'Early Actions', icon: ShieldAlert, badge: 'Priority' },

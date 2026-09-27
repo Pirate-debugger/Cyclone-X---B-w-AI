@@ -92,6 +92,7 @@ app.include_router(ai_router, prefix="/api")
 app.include_router(alerts_router, prefix="/api")
 app.include_router(reports_router, prefix="/api")
 app.include_router(v2_router, prefix="/api")
+app.include_router(v2_router, prefix="/api/v2")
 
 @app.get("/")
 async def root():

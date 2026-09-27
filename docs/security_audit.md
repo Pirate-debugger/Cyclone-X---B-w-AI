@@ -15,9 +15,9 @@ This report certifies the security posture of the **CYCLONE-X** platform followi
 A complete regex sweep for `API_KEY`, `SECRET`, `TOKEN`, `PASSWORD`, `PRIVATE_KEY`, `Bearer`, and service account keys was conducted across all files.
 
 ### Key Remediation Actions Taken:
-1. **Carto retina basemap key (`cb1_3zqt_1_...`):**
+1. **Basemap key management:**
    - Completely stripped from `.env`, `.env.example`, `frontend/.env.local`, `security.py`, `routes_system.py`, `frontend/lib/api.ts`, `MapContainer.tsx`, and `SettingsView.tsx`.
-   - Replaced with environment-driven variable `NEXT_PUBLIC_MAP_KEY`. When unset, Carto raster tiles load via standard public anonymous tile requests without authentication errors.
+   - Replaced with environment-driven variable `NEXT_PUBLIC_MAP_KEY` and Google Maps client credentials. Standard tile requests load without exposed tokens.
 2. **Gemini API Key:**
    - Isolated to server-side `GEMINI_API_KEY` environment variable.
    - Client applications never access the raw key; all AI queries pass through authenticated backend proxy (`/api/ai/copilot-v2`, `/api/ai/explain`).

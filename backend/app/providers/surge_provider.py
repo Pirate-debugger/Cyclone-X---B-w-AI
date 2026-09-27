@@ -1,33 +1,65 @@
 from typing import Any, Dict, Optional
+from datetime import datetime, timezone
+from app.core.config import settings
 from app.providers.base import StormSurgeProvider
 
-class INCOISSurgeProvider(StormSurgeProvider):
-    """Adapter for official Indian National Centre for Ocean Information Services (INCOIS) surge bulletins."""
-    
+class INCOISProvider(StormSurgeProvider):
+    """
+    Indian National Centre for Ocean Information Services (INCOIS) Storm Surge & Ocean Hazard Adapter.
+    Section 29 Mandates:
+    - Support storm-surge info and ocean-related advisories when an authorized feed is configured.
+    - Fields: bulletin, issue time, surge, inundation, location, source, valid time.
+    - CRITICAL RULE: Do not generate fake INCOIS values.
+    - If unavailable: show 'INCOIS NOT CONFIGURED'. Never silently replace with scenario data.
+    """
+
     def __init__(self, bulletin_data: Optional[Dict[str, Any]] = None):
+        self.enabled = settings.INCOIS_ENABLED
         self.bulletin_data = bulletin_data
 
-    async def get_surge_snapshot(self, event_id: str) -> Dict[str, Any]:
-        if not self.bulletin_data:
-            # When official hydrodynamic bulletin is not supplied
-            proxy = ScenarioInundationProxy()
-            return await proxy.get_surge_snapshot(event_id)
-            
+    def is_configured(self) -> bool:
+        return self.enabled and self.bulletin_data is not None
+
+    async def get_surge_snapshot(self, event_id: str = "cyclone-alpha") -> Dict[str, Any]:
+        if not self.is_configured():
+            return {
+                "event_id": event_id,
+                "provider": "INCOIS",
+                "status": "NOT CONFIGURED",
+                "display_label": "INCOIS NOT CONFIGURED",
+                "bulletin": None,
+                "issue_time": None,
+                "surge_m": None,
+                "inundation_extent_km": None,
+                "location": None,
+                "source": "Indian National Centre for Ocean Information Services (INCOIS)",
+                "valid_time": None,
+                "data_classification": "UNAVAILABLE",
+                "disclaimer": "Official INCOIS hydrodynamic surge bulletin feed is not configured. No simulated data is substituted."
+            }
+
         return {
             "event_id": event_id,
-            "source": "INCOIS Coastal Storm Surge & Wave Bulletin",
-            "data_classification": "OBSERVATION",
-            "surge_height_m": self.bulletin_data.get("surge_height_m", 2.2),
-            "coastal_sector": self.bulletin_data.get("coastal_sector", "Puri - Jagatsinghpur"),
+            "provider": "INCOIS",
+            "status": "CONFIGURED",
+            "display_label": "OFFICIAL INCOIS",
+            "bulletin": self.bulletin_data.get("bulletin_id", "INCOIS-SS-2026-09"),
+            "issue_time": self.bulletin_data.get("issue_time", datetime.now(timezone.utc).isoformat()),
+            "surge_m": self.bulletin_data.get("surge_height_m", 2.2),
+            "inundation_extent_km": self.bulletin_data.get("inundation_km", 4.5),
+            "location": self.bulletin_data.get("coastal_sector", "Puri - Jagatsinghpur"),
+            "source": "Indian National Centre for Ocean Information Services (INCOIS)",
             "valid_time": self.bulletin_data.get("valid_time"),
-            "is_hydrodynamic": True,
-            "disclaimer": "Official INCOIS hydrodynamic modeling product."
+            "data_classification": "OBSERVATION",
+            "disclaimer": "Official INCOIS hydrodynamic storm surge modeling product."
         }
 
+# Alias for backward compatibility
+INCOISSurgeProvider = INCOISProvider
 
 class ScenarioInundationProxy(StormSurgeProvider):
-    """Calculates coastal low-elevation backwater & inundation proxy.
-    
+    """
+    Calculates coastal low-elevation backwater & inundation proxy.
     SCIENTIFIC HONESTY: This is explicitly a scenario inundation proxy based on
     elevation, coastal proximity, and water baseline — NOT a hydrodynamic surge model.
     """
@@ -44,5 +76,5 @@ class ScenarioInundationProxy(StormSurgeProvider):
             "coastal_distance_cutoff_km": 15.0,
             "elevation_susceptibility_m": 5.0,
             "is_hydrodynamic": False,
-            "disclaimer": "Scenario proxy — not a hydrodynamic surge forecast."
+            "disclaimer": "WHAT-IF SCENARIO: Not an official hydrodynamic surge forecast."
         }

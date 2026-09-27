@@ -222,3 +222,116 @@ class ProviderFreshnessDetail(BaseModel):
     elapsed_minutes: int
     latency_ms: int
     access_tier: str
+
+# 7. Official IMD Cyclone Ingestion Schemas (Section 12)
+class OfficialForecastPoint(BaseModel):
+    valid_time: str
+    lead_hours: int
+    latitude: float
+    longitude: float
+    max_sustained_wind_kmh: float
+    max_gust_kmh: float
+    central_pressure_hpa: float
+    stage: str
+    r34_radius_km: float = 120.0
+    r50_radius_km: float = 60.0
+
+class OfficialForecastRun(BaseModel):
+    event_id: str
+    cyclone_name: str
+    bulletin_number: int
+    bulletin_time: str
+    next_bulletin_time: str
+    warning_status: str
+    advisory_text: str
+    observed_lat: float
+    observed_lon: float
+    current_intensity_kmh: float
+    central_pressure_hpa: float
+    estimated_landfall_sector: str
+    estimated_landfall_time: str
+    forecast_points: List[OfficialForecastPoint]
+    official_source: str = "India Meteorological Department (RSMC New Delhi)"
+    official_source_url: str = "https://mausam.imd.gov.in/cyclone"
+    classification: DataClassification = DataClassification.OFFICIAL_ADVISORY
+    disclaimer: str = "OFFICIAL IMD GOVERNMENT WARNING. Legally authoritative civil defense forecast."
+
+# 8. Route Risk Intelligence Schemas (Sections 8 & 37)
+class RouteRiskIntersection(BaseModel):
+    location_name: str
+    latitude: float
+    longitude: float
+    risk_factor: str
+    hazard_severity: str
+    modeled_water_depth_m: Optional[float] = None
+    wind_gust_kmh: Optional[float] = None
+
+class RouteRiskAssessment(BaseModel):
+    route_id: str
+    origin_name: str
+    destination_name: str
+    origin_coords: List[float]
+    destination_coords: List[float]
+    distance_km: float
+    duration_minutes: float
+    overall_risk_band: RiskBand
+    route_exposure_score: float
+    high_risk_intersections: List[RouteRiskIntersection]
+    critical_bridges_crossed: List[Dict[str, Any]]
+    alternative_route_available: bool
+    alternative_route_notes: Optional[str] = None
+    route_geojson: Dict[str, Any]
+    disclaimer: str = "Route intersects modeled high-risk area. Not an official road closure notice unless verified by civil authorities."
+    classification: DataClassification = DataClassification.MODEL_OUTPUT
+
+# 9. Vertex AI Predictive Impact Model Schemas (Sections 15-18)
+class VertexFeatureVector(BaseModel):
+    wind_forecast_kmh: float
+    wind_percentile_p90: float
+    rainfall_24h_mm: float
+    rainfall_percentile_p90: float
+    inundation_proxy_m: float
+    elevation_m: float
+    distance_to_coast_km: float
+    land_cover: str
+    population_density_per_sqkm: float
+    infrastructure_type: str
+    asset_criticality: int
+    road_accessibility_score: float
+    historical_flood_frequency: float
+    forecast_lead_time_hours: int
+    model_disagreement_km: float
+    forecast_run_stability: float
+
+class VertexPredictionResult(BaseModel):
+    model_name: str = "CYCLONE-X Impact Intelligence Model"
+    model_version: str = "v3.0.0-vertex-prod"
+    model_endpoint: str
+    serving_mode: str  # "VERTEX_ENDPOINT", "LOCAL_BASELINE", "DEMO"
+    prediction_timestamp: str
+    input_run_id: str
+    p_wind_impact: float
+    p_rain_impact: float
+    p_flood_impact: float
+    p_service_disruption: float
+    p_combined_impact: float
+    confidence_interval: Optional[Dict[str, float]] = None
+    metrics_evaluated: Optional[Dict[str, float]] = None
+    classification: DataClassification = DataClassification.MODEL_OUTPUT
+
+# 10. Multilingual Advisory Workflow Schemas (Section 25)
+class MultilingualAdvisory(BaseModel):
+    advisory_id: str
+    source_advisory_id: str
+    source_language: str
+    target_language: str
+    target_language_name: str
+    translated_title: str
+    translated_advisory_body: str
+    key_action_directives: List[str]
+    translation_engine: str = "Google Cloud Translation API v3"
+    translation_timestamp: str
+    human_reviewed: bool = False
+    reviewer_id: Optional[str] = None
+    approval_state: str = "DRAFT"  # "DRAFT", "EVIDENCE_REVIEWED", "APPROVED", "DISPATCHED"
+    classification: DataClassification = DataClassification.OFFICIAL_ADVISORY

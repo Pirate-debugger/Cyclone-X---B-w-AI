@@ -35,7 +35,7 @@ if (typeof window !== 'undefined' && typeof (maplibregl as any).setWorkerUrl ===
   (maplibregl as any).setWorkerUrl('/maplibre-gl-worker.mjs');
 }
 
-export const CARTO_DEFAULT_KEY = 'cb1_3zqt_1_dc5d1212b00788ce3409d182';
+export const CARTO_DEFAULT_KEY = '';
 
 export function getResolvedCartoKey(): string {
   if (typeof window !== 'undefined') {

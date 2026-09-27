@@ -29,10 +29,17 @@ services:
       APP_MODE: ${APP_MODE:-demo}
       DATABASE_URL: postgresql://cyclonex:cyclonex_secret@db:5432/cyclonex_db
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
-      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-3.7-flash}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-3.8-flash}
       GOOGLE_CLOUD_PROJECT: ${GOOGLE_CLOUD_PROJECT:-}
+      VERTEX_AI_PROJECT: ${VERTEX_AI_PROJECT:-}
+      VERTEX_AI_LOCATION: ${VERTEX_AI_LOCATION:-us-central1}
+      VERTEX_IMPACT_ENDPOINT: ${VERTEX_IMPACT_ENDPOINT:-}
       EARTH_ENGINE_PROJECT: ${EARTH_ENGINE_PROJECT:-}
-      WEATHER_PROVIDER: ${WEATHER_PROVIDER:-open-meteo}
+      BIGQUERY_PROJECT: ${BIGQUERY_PROJECT:-}
+      BIGQUERY_DATASET: ${BIGQUERY_DATASET:-cyclonex_analytics}
+      FIREBASE_PROJECT_ID: ${FIREBASE_PROJECT_ID:-}
+      GOOGLE_MAPS_API_KEY: ${GOOGLE_MAPS_API_KEY:-}
+      GOOGLE_WEATHER_API_ENABLED: ${GOOGLE_WEATHER_API_ENABLED:-false}
     ports:
       - "8000:8000"
     depends_on:
@@ -52,6 +59,7 @@ services:
     restart: unless-stopped
     environment:
       NEXT_PUBLIC_API_URL: http://backend:8000
+      NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: ${NEXT_PUBLIC_GOOGLE_MAPS_API_KEY:-}
     ports:
       - "3000:3000"
     depends_on:

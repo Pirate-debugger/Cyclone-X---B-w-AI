@@ -94,6 +94,16 @@ class HazardFieldEngine:
             classification=DataClassification.MODEL_OUTPUT
         )
 
+    @classmethod
+    def get_rainfall_exceedances(cls, event_id: str = "cyclone-alpha") -> List[Dict[str, Any]]:
+        overview = cls.get_hazard_overview(event_id)
+        return [r.model_dump() for r in overview.rainfall_exceedances]
+
+    @classmethod
+    def get_inundation_components(cls, event_id: str = "cyclone-alpha") -> InundationDecomposition:
+        overview = cls.get_hazard_overview(event_id)
+        return overview.inundation_components
+
     @staticmethod
     def get_spatial_hazard_geojson(event_id: str = "cyclone-alpha") -> Dict[str, Any]:
         """

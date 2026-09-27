@@ -150,6 +150,8 @@ export interface HotspotZone {
   name: string;
   administrative_area?: string;
   geometry: any;
+  center_lat?: number;
+  center_lon?: number;
   risk_score: number;
   risk_band: RiskBand;
   hazard_score: number;
@@ -300,6 +302,7 @@ export interface Alert {
     te?: AlertTranslation;
     bn?: AlertTranslation;
   };
+  action_notes?: string;
   delivery_channel: string;
   delivery_status: string;
   audit_trail: Array<{

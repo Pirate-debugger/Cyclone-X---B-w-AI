@@ -13,13 +13,15 @@ import {
   Layers,
   AlertTriangle,
   Radio,
-  Cpu
+  Cpu,
+  Mic
 } from 'lucide-react';
 
 interface CommandHeaderProps {
   onSearchCommand?: (cmd: string) => void;
   onOpenDataHealth?: () => void;
   onOpenCopilot?: () => void;
+  onOpenVoice?: () => void;
   isDemo?: boolean;
   eventTitle?: string;
   latestRunId?: string;
@@ -30,6 +32,7 @@ export const CommandHeader: React.FC<CommandHeaderProps> = ({
   onSearchCommand,
   onOpenDataHealth,
   onOpenCopilot,
+  onOpenVoice,
   isDemo = true,
   eventTitle = "TC-2026-ALPHA (Bay of Bengal)",
   latestRunId = "RUN-18Z",
@@ -78,21 +81,31 @@ export const CommandHeader: React.FC<CommandHeaderProps> = ({
           </div>
         </div>
 
-        {/* Active Operational Chips */}
-        <div className="hidden xl:flex items-center gap-2 text-[10px] font-mono text-slate-300">
-          <div className="bg-[#0f172a] border border-[#1e293b] px-2 py-1 rounded flex items-center gap-1">
-            <span className="text-slate-500">EVENT:</span>
-            <span className="text-cyan-300 font-semibold">{eventTitle}</span>
+        {/* Active Operational Chips (Section 42) */}
+        <div className="hidden xl:flex items-center gap-1.5 text-[10px] font-mono text-slate-300">
+          <div className="bg-[#0f172a] border border-rose-900/60 px-2 py-0.5 rounded flex items-center gap-1.5 text-rose-300">
+            <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse"></span>
+            <span className="font-bold">IMD: RED ALERT</span>
           </div>
 
-          <div className="bg-[#0f172a] border border-[#1e293b] px-2 py-1 rounded flex items-center gap-1">
+          <div className="bg-[#0f172a] border border-[#1e293b] px-2 py-0.5 rounded flex items-center gap-1">
+            <span className="text-slate-500">WEATHERNEXT:</span>
+            <span className="text-cyan-300 font-semibold">64 MBRS</span>
+          </div>
+
+          <div className="bg-[#0f172a] border border-[#1e293b] px-2 py-0.5 rounded flex items-center gap-1">
+            <span className="text-slate-500">EE:</span>
+            <span className="text-emerald-300 font-semibold">S1-SAR</span>
+          </div>
+
+          <div className="bg-[#0f172a] border border-[#1e293b] px-2 py-0.5 rounded flex items-center gap-1">
+            <span className="text-slate-500">VERTEX:</span>
+            <span className="text-purple-300 font-semibold">IMPACT MODEL</span>
+          </div>
+
+          <div className="bg-[#0f172a] border border-[#1e293b] px-2 py-0.5 rounded flex items-center gap-1">
             <span className="text-slate-500">RUN:</span>
-            <span className="text-purple-300 font-semibold">{latestRunId}</span>
-          </div>
-
-          <div className="bg-[#0f172a] border border-[#1e293b] px-2 py-1 rounded flex items-center gap-1">
-            <span className="text-slate-500">MODEL:</span>
-            <span className="text-emerald-300 font-semibold">{modelVersion}</span>
+            <span className="text-cyan-400 font-semibold">{latestRunId}</span>
           </div>
         </div>
       </div>
@@ -105,7 +118,7 @@ export const CommandHeader: React.FC<CommandHeaderProps> = ({
           value={searchValue}
           onChange={(e) => setSearchValue(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Search district, hospital, 'Why did risk increase?', 'Compare runs'..."
+          placeholder="Ask: 'Show high impact hospitals', 'Compare runs', 'Route risk'..."
           className="w-full bg-[#0f172a] border border-[#1e293b] rounded pl-8 pr-16 py-1.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-500 transition-colors font-mono"
         />
         <span className="absolute right-2.5 top-2 text-[10px] text-slate-500 font-mono bg-[#1e293b] px-1 rounded">↵ Enter</span>
@@ -129,11 +142,20 @@ export const CommandHeader: React.FC<CommandHeaderProps> = ({
         </div>
 
         <button 
+          onClick={onOpenVoice}
+          className="flex items-center gap-1.5 bg-[#0f172a] hover:bg-[#1e293b] border border-cyan-800/80 text-cyan-300 px-2.5 py-1 rounded transition-colors"
+          title="Voice Command Center (Google Cloud STT / TTS)"
+        >
+          <Mic className="w-3.5 h-3.5 text-cyan-400 animate-pulse" />
+          <span className="font-mono text-[11px] font-bold">VOICE</span>
+        </button>
+
+        <button 
           onClick={onOpenCopilot}
           className="flex items-center gap-1.5 bg-gradient-to-r from-cyan-950 to-blue-950 hover:from-cyan-900 hover:to-blue-900 border border-cyan-800 text-cyan-300 px-3 py-1 rounded transition-all shadow-sm"
         >
           <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
-          <span className="font-semibold text-[11px] font-mono">AI COPILOT</span>
+          <span className="font-semibold text-[11px] font-mono">GEMINI 3.8</span>
         </button>
 
         <div className="flex items-center gap-1.5 bg-[#0f172a] border border-[#1e293b] px-2.5 py-1 rounded text-slate-400 text-[11px] font-mono">

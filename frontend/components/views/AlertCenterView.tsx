@@ -14,13 +14,15 @@ import {
   AlertTriangle 
 } from 'lucide-react';
 import { Alert } from '../../lib/types';
-import { getAlerts, createAlertDraft, approveAlert, sendAlert } from '../../lib/api';
+import { getAlerts, createAlertDraft, approveAlert, sendAlert, translateAdvisory } from '../../lib/api';
 
 export const AlertCenterView: React.FC = () => {
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [selectedAlert, setSelectedAlert] = useState<Alert | null>(null);
   const [selectedLang, setSelectedLang] = useState<'en' | 'hi' | 'or' | 'te' | 'bn'>('en');
   const [loading, setLoading] = useState(false);
+  const [translating, setTranslating] = useState(false);
+  const [translationMeta, setTranslationMeta] = useState<any>(null);
   const [dispatchStatus, setDispatchStatus] = useState<string | null>(null);
   const [showDraftModal, setShowDraftModal] = useState(false);
 
@@ -91,6 +93,40 @@ export const AlertCenterView: React.FC = () => {
       alert(e.message || 'Dispatch error');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleTranslate = async (lang: 'hi' | 'or' | 'te' | 'bn') => {
+    if (!selectedAlert) return;
+    setTranslating(true);
+    try {
+      const res = await translateAdvisory({
+        source_advisory_id: selectedAlert.id,
+        english_title: selectedAlert.title,
+        english_body: selectedAlert.translations?.en?.body || selectedAlert.action_notes || selectedAlert.title,
+        target_language: lang
+      });
+      setTranslationMeta(res);
+      
+      setSelectedAlert(prev => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          translations: {
+            ...prev.translations,
+            [lang]: {
+              title: res.translated_title || prev.translations[lang]?.title || prev.title,
+              body: res.translated_advisory_body || prev.translations[lang]?.body
+            }
+          }
+        };
+      });
+      setSelectedLang(lang);
+    } catch (err: any) {
+      console.error(err);
+      alert('Cloud Translation API failed: ' + (err.message || ''));
+    } finally {
+      setTranslating(false);
     }
   };
 
@@ -209,25 +245,55 @@ export const AlertCenterView: React.FC = () => {
               </div>
             </div>
 
-            {/* Language Selector */}
-            <div className="flex items-center gap-1.5 bg-[#080d1a] p-1.5 rounded border border-[#1e293b] overflow-x-auto">
-              {(Object.keys(languageLabels) as Array<'en' | 'hi' | 'or' | 'te' | 'bn'>).map((lang) => (
+            {/* Language Selector & Cloud Translation Trigger */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-[#080d1a] p-2 rounded border border-[#1e293b]">
+              <div className="flex items-center gap-1.5 overflow-x-auto">
+                <span className="text-[10px] text-slate-500 font-mono font-bold mr-1">LANG:</span>
+                {(Object.keys(languageLabels) as Array<'en' | 'hi' | 'or' | 'te' | 'bn'>).map((lang) => (
+                  <button
+                    key={lang}
+                    onClick={() => setSelectedLang(lang)}
+                    className={`px-2.5 py-1 rounded text-[11px] font-semibold transition-all ${
+                      selectedLang === lang 
+                        ? 'bg-cyan-600 text-white shadow-sm' 
+                        : 'text-slate-400 hover:text-white bg-[#0f172a]'
+                    }`}
+                  >
+                    {languageLabels[lang]}
+                  </button>
+                ))}
+              </div>
+
+              {selectedLang !== 'en' && (
                 <button
-                  key={lang}
-                  onClick={() => setSelectedLang(lang)}
-                  className={`px-2.5 py-1 rounded text-[11px] font-semibold transition-all ${
-                    selectedLang === lang 
-                      ? 'bg-cyan-600 text-white' 
-                      : 'text-slate-400 hover:text-white'
-                  }`}
+                  onClick={() => handleTranslate(selectedLang)}
+                  disabled={translating}
+                  className="flex items-center gap-1 bg-gradient-to-r from-purple-900 to-indigo-900 hover:from-purple-800 hover:to-indigo-800 text-purple-200 border border-purple-700/60 text-[11px] font-mono px-2.5 py-1 rounded transition-all shrink-0"
                 >
-                  {languageLabels[lang]}
+                  <Languages className="w-3.5 h-3.5 text-purple-400" />
+                  <span>{translating ? 'Translating...' : 'Translate with Cloud Translation API'}</span>
                 </button>
-              ))}
+              )}
             </div>
 
-            {/* Advisory Preview Body */}
-            <div className="bg-[#080d1a] border border-[#1e293b] rounded p-4 space-y-2">
+            {/* Advisory Preview Body & Provenance */}
+            <div className="bg-[#080d1a] border border-[#1e293b] rounded p-4 space-y-3">
+              {selectedLang !== 'en' && (
+                <div className="bg-[#0b1329] border border-purple-900/50 rounded p-2 text-[10px] font-mono flex flex-wrap items-center justify-between gap-2 text-slate-400">
+                  <div className="flex items-center gap-2">
+                    <span className="text-purple-400 font-bold">TRANSLATION PROVENANCE:</span>
+                    <span>ENGINE: {translationMeta?.translation_engine || 'Google Cloud Translation API (v3)'}</span>
+                    <span>• REVIEW: Gemini 3.8 Contextual Polish</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="bg-amber-950 text-amber-400 border border-amber-800 px-1.5 py-0.5 rounded font-bold">
+                      HUMAN REVIEW REQUIRED
+                    </span>
+                    <span>{new Date().toISOString().slice(0, 16)} UTC</span>
+                  </div>
+                </div>
+              )}
+
               <h3 className="font-bold text-slate-100 text-sm">
                 {selectedAlert.translations[selectedLang]?.title || selectedAlert.title}
               </h3>

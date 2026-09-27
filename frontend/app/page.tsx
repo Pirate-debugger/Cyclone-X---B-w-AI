@@ -26,14 +26,14 @@ import { PriorityZonesTable } from '../components/PriorityZonesTable';
 import { AICopilotDrawer } from '../components/AICopilotDrawer';
 import { DataHealthDrawer } from '../components/DataHealthDrawer';
 
-const MapContainer = dynamic(
-  () => import('../components/MapContainer').then((mod) => mod.MapContainer),
+const GoogleMapContainer = dynamic(
+  () => import('../components/GoogleMapContainer').then((mod) => mod.GoogleMapContainer),
   {
     ssr: false,
     loading: () => (
       <div className="w-full h-full flex flex-col items-center justify-center bg-[#050914] text-slate-500 font-mono text-xs space-y-2">
         <div className="w-6 h-6 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin"></div>
-        <span>Initializing Geospatial Map Engine...</span>
+        <span>Initializing Google Maps Platform & Geospatial Layers...</span>
       </div>
     ),
   }
@@ -52,6 +52,9 @@ import { ForecastEvolutionView } from '../components/views/ForecastEvolutionView
 import { ModelComparisonView } from '../components/views/ModelComparisonView';
 import { ForecastVerificationView } from '../components/views/ForecastVerificationView';
 import { EarlyActionsView } from '../components/views/EarlyActionsView';
+import { GoogleComplianceView } from '../components/views/GoogleComplianceView';
+import { RouteRiskView } from '../components/views/RouteRiskView';
+import { VoiceCommandModal } from '../components/VoiceCommandModal';
 
 import { 
   CycloneEvent, 
@@ -86,9 +89,10 @@ export default function CycloneXApp() {
   const [selectedInfra, setSelectedInfra] = useState<InfrastructureRiskAssessment | null>(null);
   const [aiExplanation, setAiExplanation] = useState<GeminiStructuredExplanation | null>(null);
   
-  // Drawers
+  // Drawers & Modals
   const [copilotOpen, setCopilotOpen] = useState(false);
   const [dataHealthOpen, setDataHealthOpen] = useState(false);
+  const [voiceModalOpen, setVoiceModalOpen] = useState(false);
   const [dataHealthInfo, setDataHealthInfo] = useState<any>(null);
 
   // Initial load
@@ -134,7 +138,13 @@ export default function CycloneXApp() {
 
   const handleSearchCommand = (cmd: string) => {
     const c = cmd.toLowerCase();
-    if (c.includes('evolution') || c.includes('cycle') || c.includes('shift')) {
+    if (c.includes('google') || c.includes('stack') || c.includes('compliance')) {
+      setActiveTab('google-stack');
+    } else if (c.includes('route') || c.includes('evac') || c.includes('road')) {
+      setActiveTab('route-risk');
+    } else if (c.includes('voice') || c.includes('speak') || c.includes('listen') || c.includes('mic')) {
+      setVoiceModalOpen(true);
+    } else if (c.includes('evolution') || c.includes('cycle') || c.includes('shift')) {
       setActiveTab('forecast-evolution');
     } else if (c.includes('model') || c.includes('consensus') || c.includes('compare')) {
       setActiveTab('model-comparison');
@@ -167,6 +177,7 @@ export default function CycloneXApp() {
         onSearchCommand={handleSearchCommand}
         onOpenDataHealth={() => setDataHealthOpen(true)}
         onOpenCopilot={() => setCopilotOpen(true)}
+        onOpenVoice={() => setVoiceModalOpen(true)}
         isDemo={true}
         eventTitle={event?.name || "Cyclone Alpha (Bay of Bengal)"}
         latestRunId="RUN-18Z"
@@ -270,9 +281,9 @@ export default function CycloneXApp() {
 
               {/* Map + Right Intelligence Panel Split */}
               <div className="flex-1 flex flex-col lg:flex-row overflow-hidden relative">
-                {/* Center Geospatial Map with 10 Map Modes */}
+                {/* Center Geospatial Map with 12 Map Modes */}
                 <div className="flex-1 h-full min-h-[350px] relative">
-                  <MapContainer 
+                  <GoogleMapContainer 
                     trackData={trackData}
                     hotspots={riskData?.top_priority_zones}
                     infrastructure={infrastructure}
@@ -300,6 +311,14 @@ export default function CycloneXApp() {
                 onSelectZone={(z) => setSelectedZone(z)}
               />
             </div>
+          )}
+
+          {activeTab === 'google-stack' && (
+            <GoogleComplianceView />
+          )}
+
+          {activeTab === 'route-risk' && (
+            <RouteRiskView />
           )}
 
           {activeTab === 'forecast-evolution' && (
@@ -394,6 +413,15 @@ export default function CycloneXApp() {
         isOpen={dataHealthOpen} 
         onClose={() => setDataHealthOpen(false)}
         healthData={dataHealthInfo}
+      />
+
+      <VoiceCommandModal 
+        isOpen={voiceModalOpen}
+        onClose={() => setVoiceModalOpen(false)}
+        onNavigateTab={(tab) => {
+          setActiveTab(tab);
+          setVoiceModalOpen(false);
+        }}
       />
     </div>
   );

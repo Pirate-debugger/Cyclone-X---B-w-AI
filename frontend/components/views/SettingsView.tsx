@@ -230,7 +230,7 @@ export const SettingsView: React.FC = () => {
                 type="text"
                 value={cartoKeyInput}
                 onChange={(e) => setCartoKeyInput(e.target.value)}
-                placeholder="Enter CARTO API Key (e.g. cb1_3zqt_1_...)"
+                placeholder="Enter CARTO API Key (e.g. carto_live_key_...)"
                 className="w-full bg-[#0b1329] border border-[#1e293b] rounded px-3 py-2 font-mono text-cyan-300 text-xs focus:outline-none focus:border-cyan-500"
               />
             </div>

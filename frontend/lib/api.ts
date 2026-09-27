@@ -229,3 +229,63 @@ export async function askCopilotV2(query: string, eventId = 'cyclone-alpha'): Pr
     body: JSON.stringify({ query, event_id: eventId })
   });
 }
+
+export async function getGoogleCompliance(): Promise<any> {
+  return fetchJson<any>('/api/system/google-compliance');
+}
+
+export async function getOfficialIMDBulletin(eventId = 'cyclone-alpha'): Promise<any> {
+  return fetchJson<any>(`/api/v2/imd/official-bulletin?event_id=${eventId}`);
+}
+
+export async function getRouteRisk(params: {
+  origin_lat?: number;
+  origin_lon?: number;
+  dest_lat?: number;
+  dest_lon?: number;
+  origin_name?: string;
+  dest_name?: string;
+} = {}): Promise<any> {
+  return fetchJson<any>('/api/v2/routes/risk', {
+    method: 'POST',
+    body: JSON.stringify(params)
+  });
+}
+
+export async function getVertexPredict(features: any): Promise<any> {
+  return fetchJson<any>('/api/v2/vertex/predict', {
+    method: 'POST',
+    body: JSON.stringify(features)
+  });
+}
+
+export async function getVertexPipelineStatus(): Promise<any> {
+  return fetchJson<any>('/api/v2/vertex/pipeline-status');
+}
+
+export async function getBigQueryOverview(): Promise<any> {
+  return fetchJson<any>('/api/v2/bigquery/overview');
+}
+
+export async function getBhuvanDatasets(): Promise<any> {
+  return fetchJson<any>('/api/v2/bhuvan/datasets');
+}
+
+export async function sendVoiceCommand(transcript: string): Promise<any> {
+  return fetchJson<any>('/api/v2/voice/command', {
+    method: 'POST',
+    body: JSON.stringify({ transcript })
+  });
+}
+
+export async function translateAdvisory(payload: {
+  source_advisory_id: string;
+  english_title: string;
+  english_body: string;
+  target_language: string;
+}): Promise<any> {
+  return fetchJson<any>('/api/v2/alerts/translate', {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  });
+}

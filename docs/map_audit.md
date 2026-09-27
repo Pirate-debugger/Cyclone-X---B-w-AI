@@ -23,7 +23,7 @@ All issues have been resolved, verified with automated browser subagent testing,
 
 | Issue | Root Cause | Impact | Resolution |
 | :--- | :--- | :--- | :--- |
-| **Watermarked Basemap** | `NEXT_PUBLIC_CARTO_API_KEY` was empty in `.env.local`. CARTO CDN requires `?key=<KEY>` on all raster tile requests. | Tiles loaded with `API KEY REQUIRED` watermark overlay. | Added `cb1_3zqt_1_dc5d1212b00788ce3409d182` across `.env.local`, `.env`, `.env.example`, and code default fallback. |
+| **Watermarked Basemap** | `NEXT_PUBLIC_CARTO_API_KEY` was empty in `.env.local`. CARTO CDN requires `?key=<KEY>` on all raster tile requests. | Tiles loaded with `API KEY REQUIRED` watermark overlay. | Configured runtime environment key resolution without hardcoded fallback. |
 | **Style Load Race Condition** | `addSource` and `addLayer` were invoked before `map.isStyleLoaded()` returned `true`. | Browser console threw `Uncaught Error: Style is not done loading` at `MapContainer.tsx:186`. | Implemented `map.isStyleLoaded()` guards, unified readiness listeners (`load` + `style.load`), and `try/catch` handlers. |
 | **Missing Satellite Basemap** | Selecting `SATELLITE` mode fell back to the `default` switch case without switching the underlying raster source. | Clicking `SATELLITE` did not change the basemap. | Configured dual basemap sources: **CARTO Dark Matter (Retina)** + **ESRI World Imagery (High-Res Satellite)** + CARTO Dark labels overlay. |
 | **Missing Zone Polygons** | `hotspots` prop was passed from `page.tsx` but lacked a layer definition in `MapContainer.tsx`. | Top priority zones were invisible on the map canvas. | Implemented `hotspot-zones-source`, `hotspot-zones-fill`, and `hotspot-zones-stroke` with risk severity color matching. |
@@ -38,7 +38,7 @@ All issues have been resolved, verified with automated browser subagent testing,
 ### A. Robust Key Resolution Chain
 In [MapContainer.tsx](file:///e:/ANTIGRVITY/B-w-AI/frontend/components/MapContainer.tsx):
 ```typescript
-export const CARTO_DEFAULT_KEY = 'cb1_3zqt_1_dc5d1212b00788ce3409d182';
+export const CARTO_DEFAULT_KEY = '';
 
 export function getResolvedCartoKey(): string {
   if (typeof window !== 'undefined') {
