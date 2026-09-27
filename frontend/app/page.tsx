@@ -12,7 +12,11 @@ import {
   Gauge, 
   Compass, 
   ShieldAlert,
-  Sparkles
+  Sparkles,
+  TrendingUp,
+  Target,
+  Activity,
+  CheckCircle2
 } from 'lucide-react';
 import { CommandHeader } from '../components/CommandHeader';
 import { NavigationSidebar, NavTab } from '../components/NavigationSidebar';
@@ -44,6 +48,10 @@ import { AlertCenterView } from '../components/views/AlertCenterView';
 import { ReportsView } from '../components/views/ReportsView';
 import { DataSourcesView } from '../components/views/DataSourcesView';
 import { SettingsView } from '../components/views/SettingsView';
+import { ForecastEvolutionView } from '../components/views/ForecastEvolutionView';
+import { ModelComparisonView } from '../components/views/ModelComparisonView';
+import { ForecastVerificationView } from '../components/views/ForecastVerificationView';
+import { EarlyActionsView } from '../components/views/EarlyActionsView';
 
 import { 
   CycloneEvent, 
@@ -51,7 +59,9 @@ import {
   RiskOverview, 
   HotspotZone, 
   InfrastructureRiskAssessment,
-  GeminiStructuredExplanation 
+  GeminiStructuredExplanation,
+  EnsembleAggregationResult,
+  AssetImpactProbability
 } from '../lib/types';
 import { 
   getEvents, 
@@ -59,7 +69,9 @@ import {
   getRiskOverview, 
   getInfrastructureRisk, 
   askGeminiCopilot,
-  getDataHealth
+  getDataHealth,
+  getEnsembleAggregation,
+  getAssetImpacts
 } from '../lib/api';
 
 export default function CycloneXApp() {
@@ -68,6 +80,8 @@ export default function CycloneXApp() {
   const [trackData, setTrackData] = useState<TrackCollection | null>(null);
   const [riskData, setRiskData] = useState<RiskOverview | null>(null);
   const [infrastructure, setInfrastructure] = useState<InfrastructureRiskAssessment[]>([]);
+  const [ensembleData, setEnsembleData] = useState<EnsembleAggregationResult | null>(null);
+  const [assetImpacts, setAssetImpacts] = useState<AssetImpactProbability[]>([]);
   const [selectedZone, setSelectedZone] = useState<HotspotZone | null>(null);
   const [selectedInfra, setSelectedInfra] = useState<InfrastructureRiskAssessment | null>(null);
   const [aiExplanation, setAiExplanation] = useState<GeminiStructuredExplanation | null>(null);
@@ -90,19 +104,25 @@ export default function CycloneXApp() {
           setTrackData(track);
         }
 
-        const risk = await getRiskOverview();
+        const [risk, infra, health, ens, impacts] = await Promise.all([
+          getRiskOverview(),
+          getInfrastructureRisk(),
+          getDataHealth(),
+          getEnsembleAggregation(),
+          getAssetImpacts()
+        ]);
+
         setRiskData(risk);
         if (risk.top_priority_zones.length > 0) {
           setSelectedZone(risk.top_priority_zones[0]);
         }
 
-        const infra = await getInfrastructureRisk();
         setInfrastructure(infra);
-
-        const health = await getDataHealth();
         setDataHealthInfo(health);
+        setEnsembleData(ens);
+        setAssetImpacts(impacts);
 
-        // Fetch AI synthesis
+        // Grounded AI initial summary
         const explanation = await askGeminiCopilot("Summarize current threat for Puri coastal zone");
         setAiExplanation(explanation);
       } catch (err) {
@@ -114,7 +134,15 @@ export default function CycloneXApp() {
 
   const handleSearchCommand = (cmd: string) => {
     const c = cmd.toLowerCase();
-    if (c.includes('hospital') || c.includes('infra') || c.includes('asset')) {
+    if (c.includes('evolution') || c.includes('cycle') || c.includes('shift')) {
+      setActiveTab('forecast-evolution');
+    } else if (c.includes('model') || c.includes('consensus') || c.includes('compare')) {
+      setActiveTab('model-comparison');
+    } else if (c.includes('verify') || c.includes('backtest') || c.includes('fani')) {
+      setActiveTab('verification');
+    } else if (c.includes('early') || c.includes('action') || c.includes('priority')) {
+      setActiveTab('early-actions');
+    } else if (c.includes('hospital') || c.includes('infra') || c.includes('asset')) {
       setActiveTab('infrastructure');
     } else if (c.includes('scenario') || c.includes('stress') || c.includes('simulat')) {
       setActiveTab('scenario-simulator');
@@ -125,21 +153,24 @@ export default function CycloneXApp() {
     } else if (c.includes('alert') || c.includes('advisory')) {
       setActiveTab('alerts');
     } else {
-      // Send directly to AI copilot
       setCopilotOpen(true);
     }
   };
 
   const metrics = riskData?.overall_metrics;
+  const topSector = ensembleData?.landfall_sectors?.[0];
 
   return (
     <div className="flex flex-col h-screen w-screen bg-[#080d1a] text-slate-100 overflow-hidden font-sans">
-      {/* Top Command Header */}
+      {/* Top Command Header (Section 43) */}
       <CommandHeader 
         onSearchCommand={handleSearchCommand}
         onOpenDataHealth={() => setDataHealthOpen(true)}
         onOpenCopilot={() => setCopilotOpen(true)}
         isDemo={true}
+        eventTitle={event?.name || "Cyclone Alpha (Bay of Bengal)"}
+        latestRunId="RUN-18Z"
+        modelVersion="WeatherNext 3 / Cyclones v2.0"
       />
 
       {/* Main Operational Body */}
@@ -154,69 +185,92 @@ export default function CycloneXApp() {
         <main className="flex-1 flex flex-col min-w-0 bg-[#050914] overflow-hidden">
           {activeTab === 'command-center' && (
             <div className="flex-1 flex flex-col h-full overflow-hidden">
-              {/* Top Operational Metric Cards Bar */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2 p-2 bg-[#080d1a] border-b border-[#1e293b] shrink-0">
+              {/* Section 44: Top Metrics Bar (The 8 Mandatory Scientific Metrics) */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-1.5 p-2 bg-[#080d1a] border-b border-[#1e293b] shrink-0 select-none">
+                {/* 1. Landfall Probability */}
                 <RiskMetricCard 
-                  label="Category"
-                  value={event?.category ? "VSCS" : "VSCS"}
-                  subvalue="Very Severe Cyclonic"
-                  icon={ShieldAlert}
+                  label="Landfall Probability"
+                  value={topSector ? `${topSector.probability_pct}%` : "47.0%"}
+                  subvalue="Puri - Astaranga Belt"
+                  icon={Target}
                   variant="severe"
-                  badge="IMD"
+                  badge="64-MBR"
                 />
+
+                {/* 2. Track Spread */}
                 <RiskMetricCard 
-                  label="Max Sustained Wind"
-                  value={`${event?.max_sustained_wind_kmh || 155}`}
-                  subvalue="Gusts: 185 km/h"
+                  label="Track Spread"
+                  value={ensembleData ? `±${ensembleData.cross_track_spread_km}km` : "±28.4km"}
+                  subvalue="Cross-track spread @ +48h"
+                  icon={TrendingUp}
+                  variant="high"
+                  badge="SPREAD"
+                />
+
+                {/* 3. Peak Wind Probability */}
+                <RiskMetricCard 
+                  label="Peak Wind Prob."
+                  value="84%"
+                  subvalue="P(Wind > 100 km/h)"
                   icon={Wind}
                   variant="severe"
-                  badge="KM/H"
+                  badge="V10"
                 />
+
+                {/* 4. Rainfall Exceedance */}
                 <RiskMetricCard 
-                  label="24h Precipitation"
-                  value="220"
-                  subvalue="Peak: 280 mm"
+                  label="Rain Exceedance"
+                  value="64%"
+                  subvalue="P(24h Rain > 200mm)"
                   icon={Droplets}
                   variant="high"
-                  badge="MM"
+                  badge="P>200"
                 />
+
+                {/* 5. Population Exposure */}
                 <RiskMetricCard 
-                  label="Surge Proxy"
-                  value="+2.2"
-                  subvalue="Inundation: < 5m ASL"
-                  icon={Waves}
-                  variant="high"
-                  badge="METERS"
-                />
-                <RiskMetricCard 
-                  label="Critical Assets"
-                  value={`${infrastructure.filter(i => i.risk_score >= 75).length}`}
-                  subvalue={`Total: ${infrastructure.length} mapped`}
-                  icon={Building2}
-                  variant="severe"
-                  badge="POSTGIS"
-                />
-                <RiskMetricCard 
-                  label="Pop. in Severe Zone"
-                  value="7,845"
-                  subvalue="Total affected: 72.6k"
+                  label="Population Exposure"
+                  value="340k"
+                  subvalue="Total affected: 1.28M"
                   icon={Users}
                   variant="severe"
                   badge="WORLDPOP"
                 />
+
+                {/* 6. Critical Infra Exposure */}
                 <RiskMetricCard 
-                  label="Composite Risk"
-                  value={`${metrics?.overall_risk_score || 82}`}
-                  subvalue="Confidence: 74%"
+                  label="Critical Lifelines"
+                  value={`${infrastructure.filter(i => i.risk_score >= 75).length}`}
+                  subvalue="Hospitals, Ports, Grids"
+                  icon={Building2}
+                  variant="severe"
+                  badge="POSTGIS"
+                />
+
+                {/* 7. Impact Probability */}
+                <RiskMetricCard 
+                  label="Combined Impact P"
+                  value="62%"
+                  subvalue="District Hospital Puri"
                   icon={AlertOctagon}
                   variant="severe"
-                  badge="SEVERE"
+                  badge="P(COMB)"
+                />
+
+                {/* 8. Forecast Stability */}
+                <RiskMetricCard 
+                  label="Forecast Stability"
+                  value="88%"
+                  subvalue="High consensus (3 models)"
+                  icon={CheckCircle2}
+                  variant="moderate"
+                  badge="STABLE"
                 />
               </div>
 
               {/* Map + Right Intelligence Panel Split */}
               <div className="flex-1 flex flex-col lg:flex-row overflow-hidden relative">
-                {/* Center Geospatial Map */}
+                {/* Center Geospatial Map with 10 Map Modes */}
                 <div className="flex-1 h-full min-h-[350px] relative">
                   <MapContainer 
                     trackData={trackData}
@@ -246,6 +300,22 @@ export default function CycloneXApp() {
                 onSelectZone={(z) => setSelectedZone(z)}
               />
             </div>
+          )}
+
+          {activeTab === 'forecast-evolution' && (
+            <ForecastEvolutionView />
+          )}
+
+          {activeTab === 'model-comparison' && (
+            <ModelComparisonView />
+          )}
+
+          {activeTab === 'verification' && (
+            <ForecastVerificationView />
+          )}
+
+          {activeTab === 'early-actions' && (
+            <EarlyActionsView />
           )}
 
           {activeTab === 'cyclone-monitor' && (
@@ -287,7 +357,7 @@ export default function CycloneXApp() {
                   <h2 className="text-base font-bold font-mono text-slate-100">AI MULTIMODAL REASONING & EVIDENCE INSPECTOR</h2>
                 </div>
                 <span className="text-[10px] font-mono text-cyan-400 bg-cyan-950 px-2 py-0.5 rounded border border-cyan-800">
-                  GEMINI ACTIVE
+                  GEMINI 3.7 FLASH ACTIVE
                 </span>
               </div>
               <div className="flex-1 relative overflow-hidden rounded-lg border border-[#1e293b]">

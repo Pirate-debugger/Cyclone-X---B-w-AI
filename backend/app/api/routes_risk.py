@@ -23,6 +23,7 @@ def load_precomputed_risk():
     return {}
 
 @router.get("")
+@router.get("/overview")
 async def get_risk_overview(event_id: str = Query("DEMO-TC-2026-ALPHA")):
     """Returns top-level risk metrics, confidence score with limiting factors, and priority zones."""
     precomputed = load_precomputed_risk()

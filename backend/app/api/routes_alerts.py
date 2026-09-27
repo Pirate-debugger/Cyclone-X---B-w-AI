@@ -43,9 +43,9 @@ async def draft_alert(
 @router.post("/approve")
 async def approve_alert(
     request: ApproveAlertRequest,
-    current_user: CurrentUser = Depends(require_role(UserRole.OPERATOR))
+    current_user: CurrentUser = Depends(require_role(UserRole.REVIEWER))
 ):
-    """Advances draft advisory to APPROVED status following supervisor review."""
+    """Advances draft advisory to APPROVED status following authorized reviewer evidence assessment."""
     approved = alert_service.approve_alert(request.alert_id, reviewer=current_user.username)
     if not approved:
         raise HTTPException(status_code=404, detail=f"Alert '{request.alert_id}' not found")
@@ -58,9 +58,9 @@ async def approve_alert(
 @router.post("/send")
 async def send_alert(
     request: SendAlertRequest,
-    current_user: CurrentUser = Depends(require_role(UserRole.OPERATOR))
+    current_user: CurrentUser = Depends(require_role(UserRole.ADMIN))
 ):
-    """Dispatches approved alert through configured provider (safe DRY RUN by default)."""
+    """Dispatches approved alert through configured provider (safe DRY RUN by default, requires ADMIN clearance)."""
     try:
         result = await alert_service.send_alert(request.alert_id, dispatcher=current_user.username)
         if not result:

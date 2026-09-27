@@ -17,9 +17,9 @@ export const DataHealthDrawer: React.FC<DataHealthDrawerProps> = ({
   if (!isOpen) return null;
 
   const providers = healthData?.providers || [
-    { name: 'Cyclone Track Provider', status: 'CONNECTED', type: 'Demo & Official Track Ingestion', freshness: 'REAL-TIME / 00Z', latency_ms: 12 },
-    { name: 'Numerical Weather Prediction', status: 'CONNECTED', type: 'ECMWF IFS 0.25° Open-Meteo', freshness: 'UPDATED 12 MIN AGO', latency_ms: 145 },
-    { name: 'Google Earth Engine', status: 'UNAVAILABLE (DEMO CACHED)', type: 'Sentinel-1 SAR / NASADEM / JRC', freshness: 'OBSERVATION • 12H AGO', latency_ms: 280 },
+    { name: 'Cyclone Track Provider', status: 'CONNECTED', type: 'Demo & Official Track Ingestion', freshness: 'REAL_TIME (CYCLE 18Z)', latency_ms: 12 },
+    { name: 'Numerical Weather Prediction', status: 'CONNECTED', type: 'ECMWF IFS 0.25° Open-Meteo', freshness: 'FRESH (15m ago)', latency_ms: 145 },
+    { name: 'Google Earth Engine', status: 'UNAVAILABLE (DEMO CACHED)', type: 'Sentinel-1 SAR / NASADEM / JRC', freshness: 'OBSERVED SATELLITE PASS', latency_ms: 280 },
     { name: 'Storm Surge Provider', status: 'PROXY_FALLBACK', type: 'Scenario Inundation Proxy (+2.2m)', freshness: 'SCENARIO', latency_ms: 8 },
     { name: 'Critical Infrastructure Provider', status: 'CONNECTED', type: 'Spatial Database & GeoJSON Inventory', freshness: 'VERIFIED 2026-09-20', latency_ms: 15 },
     { name: 'Demographic Baseline', status: 'CACHED', type: 'WorldPop Global 100m Population', freshness: 'MODEL ESTIMATE (2020)', latency_ms: 22 },

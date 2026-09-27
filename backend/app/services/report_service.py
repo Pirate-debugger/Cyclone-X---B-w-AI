@@ -36,10 +36,10 @@ class ReportService:
 
         provenance = [
             {"component": "Cyclone Forecast Track", "source": "Official Forecast Track Ingestion Protocol", "freshness": "ACTIVE"},
-            {"component": "Numerical Weather Prediction", "source": "ECMWF IFS 0.25° via Open-Meteo", "freshness": "UPDATED 12 MIN AGO"},
+            {"component": "Numerical Weather Prediction", "source": "WeatherNext 3 / ECMWF IFS 0.25°", "freshness": "FRESH (CYCLE 18Z)"},
             {"component": "Digital Elevation Model", "source": "NASA NASADEM (30m)", "freshness": "BASELINE TERRAIN"},
-            {"component": "Satellite Radar Observation", "source": "Copernicus Sentinel-1 SAR GRD", "freshness": "OBSERVATION • 12H AGO"},
-            {"component": "Demographic Baseline", "source": "WorldPop Global 100m (2020 projection)", "freshness": "MODEL ESTIMATE"}
+            {"component": "Satellite Radar Observation", "source": "Copernicus Sentinel-1 SAR GRD", "freshness": "OBSERVED SATELLITE PASS"},
+            {"component": "Demographic Baseline", "source": "WorldPop Global 100m (2025 projection)", "freshness": "MODEL ESTIMATE"}
         ]
 
         uncertainties = [

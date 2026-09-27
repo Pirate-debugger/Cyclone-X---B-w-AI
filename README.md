@@ -1,258 +1,228 @@
-# CYCLONE-X
+# CYCLONE-X V2
 
-## AI-Powered Cyclone Impact & Infrastructure Vulnerability Intelligence Platform
+## AI-Powered Probabilistic Cyclone Forecasting, Impact & Infrastructure Intelligence Platform
 
 [![Python](https://img.shields.io/badge/Python-3.12%2B%20%7C%203.14-blue.svg)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115%2B-009688.svg)](https://fastapi.tiangolo.com/)
 [![Next.js](https://img.shields.io/badge/Next.js-16%20(App%20Router)-black.svg)](https://nextjs.org/)
-[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-v4-38bdf8.svg)](https://tailwindcss.com/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-PostGIS%2016-336791.svg)](https://postgis.net/)
 [![Google GenAI SDK](https://img.shields.io/badge/Google_GenAI-Gemini%203.7%2F3.8-4285F4.svg)](https://ai.google.dev/)
 [![Google Earth Engine](https://img.shields.io/badge/Earth_Engine-Satellite%20Intelligence-34A853.svg)](https://earthengine.google.com/)
 [![License](https://img.shields.io/badge/License-Apache%202.0-orange.svg)](LICENSE)
 
-> **IMPORTANT SCIENTIFIC NOTICE**: CYCLONE-X is a decision-support prototype platform designed for authorized emergency management personnel. All outputs are modeled approximations and decision-support guidance — **not official government warnings or automated evacuation orders**.
+> **CORE PROPOSITION**: *"From atmospheric forecast to infrastructure-level impact probability."*  
+> **OPERATIONAL PIPELINE**: `PREDICT` &rarr; `SIMULATE` &rarr; `LOCALIZE` &rarr; `PRIORITIZE` &rarr; `EXPLAIN` &rarr; `ACT`
 
 ---
 
-## 1. Project Overview
+## 1. System Overview
 
-During severe cyclonic events in the Bay of Bengal and coastal APAC (such as Odisha, Andhra Pradesh, West Bengal, and Bangladesh), disaster managers are inundated with numerical weather bulletins and satellite imagery. However, standard weather applications only display isobar contours, satellite cloud loops, or wind gust forecasts.
+During severe cyclonic events in the Bay of Bengal and coastal APAC (Odisha, Andhra Pradesh, West Bengal, Bangladesh), disaster authorities are inundated with raw isobar charts and cloud loops. However, emergency operations commanders do not need another generic wind app — they need to know **which hospital will lose power**, **which bridge will be submerged**, and **what percentage of ensemble members predict catastrophic coastal inundation**.
 
-**CYCLONE-X** bridges the operational gap between meteorological forecasting and civil protection:
+**CYCLONE-X V2** transforms atmospheric numerical forecasting and vortex-centric AI into actionable, asset-level impact intelligence:
 
-1. **Ingests Forecast Tracks** and separates them strictly from **Historical Best Tracks** (NOAA IBTrACS).
-2. **Ingests Numerical Weather Forecasts** (ECMWF IFS 0.25° via Open-Meteo).
-3. **Integrates Google Earth Engine** satellite and terrain datasets (Copernicus Sentinel-1 C-band SAR, NASA NASADEM 30m, JRC Global Surface Water, Dynamic World 10m, WorldPop 100m, GHSL Built-Up).
-4. **Transparent Hazard Engine**: Models Wind Hazard (Modified Rankine Vortex), 24h Precipitation, and Coastal Surge Inundation Proxy.
-5. **Critical Infrastructure Intersection**: Evaluates risk across Hospitals, Power Substations, Cyclone Shelters, Bridges, Roads, and Water Facilities using PostGIS.
-6. **Transparent 0–100 Risk Engine**: Weighted formulation ($0.50 \times \text{Hazard} + 0.30 \times \text{Exposure} + 0.20 \times \text{Vulnerability}$) configured in `config/risk_config.yaml`.
-7. **Spatial Hotspot Identification**: Gridded geographic detection ranking priority evacuation and resource staging zones.
-8. **What-If Scenario Simulator**: Interactive multipliers for wind, rainfall, surge proxy, and track shifts to stress-test compound failure.
-9. **Grounded Gemini Multimodal AI Copilot**: Uses the official Google GenAI SDK with structured evidence injection, strict factuality guardrails, and deterministic backend fallbacks.
-10. **Multilingual Advisory Center**: Human-in-the-loop workflow (`DRAFT → REVIEW → APPROVE → SEND`) with translations in English, Hindi, Odia, Telugu, and Bengali.
-11. **Publication-Ready Incident Briefings**: Instant export to PDF (via ReportLab), CSV, JSON, and GeoJSON.
-12. **100% Offline Zero-Credential DEMO MODE**: Seamless startup with simulated `DEMO CYCLONE ALPHA` data, switching cleanly to `LIVE FEED` when credentials are supplied.
+1. **WeatherNext 3 NWP Adapter**: Ingests 64-member deep atmospheric ensembles with strict SI unit normalization ($K \to ^\circ\text{C}, m \to mm, m/s \to km/h, Pa \to hPa$).
+2. **WeatherNext Cyclones (AI Model)**: Vortex-specialized neural trajectory and intensity prediction with asynchronous background worker execution (`CycloneInferenceWorker`).
+3. **Multi-Model Consensus Engine**: Objective verification comparing Official IMD/RSMC tracks, WeatherNext Cyclones, and ECMWF IFS 0.25° without picking an arbitrary "winner".
+4. **Landfall Probability Engine**: Discretizes coastlines into sectors (Puri-Astaranga, Paradip-Dhamra, Gopalpur-Ganjam, Balasore-Digha) and calculates empirical member landfall probabilities.
+5. **Gridded Spatial Hazard Fields**: Gridded wind core footprints ($V_{10}$, gusts), rainfall accumulation exceedances ($P(\text{rain} > 100\text{mm}), P(\text{rain} > 200\text{mm})$), and three-way water level decomposition (astronomical tide + meteorological storm surge + wave setup).
+6. **Infrastructure Impact Probability Engine**: Evaluates individual asset-level fragility across 64 ensemble members: $P(\text{wind}), P(\text{rain}), P(\text{flood}), P(\text{combined})$.
+7. **Cascading Lifeline Network Graph**: Models interdependent failure propagation (substation outage &rarr; water pump failure &rarr; hospital operational degradation).
+8. **Forecast Run Evolution**: Tracks cycle-by-cycle revisions (00Z &rarr; 06Z &rarr; 12Z &rarr; 18Z), calculating track shift in kilometers, intensity revisions, and landfall acceleration.
+9. **Scientific Backtesting & Verification**: Benchmarks models against historical cyclone best-tracks from NOAA IBTrACS (Cyclone Fani 2019, Amphan 2020, Mocha 2023) using Brier Scores and Continuous Ranked Probability Scores (CRPS).
+10. **Early Response Action Prioritization**: Ranks prioritized civil protection interventions (backup generator inspection, shelter stocking, medical pre-staging) for authorized incident commanders.
+11. **Grounded Gemini AI Copilot V2**: Tool-calling decision-support agent equipped with 14 deterministic backend inspection tools and strict factuality guardrails.
+12. **Multilingual Advisory Workflow**: Human-in-the-loop lifecycle (`DRAFT &rarr; REVIEW &rarr; APPROVE &rarr; DISPATCH`) supporting English, Hindi, Odia, Telugu, and Bengali with strict server-side RBAC.
 
 ---
 
-## 2. System Architecture
+## 2. Advanced Architecture
 
 ```
-+-------------------------------------------------------------------------------------------------+
-|                                    CYCLONE-X COMMAND CENTER UI                                  |
-|                 (Next.js App Router, React 19, TypeScript, Tailwind CSS, MapLibre GL)           |
-+-------------------------------------------------------------------------------------------------+
-          |                                      |                                    |
-          | REST / JSON                          | GeoJSON & Vector Tiles             | Server Actions / SSE
-          v                                      v                                    v
-+-------------------------------------------------------------------------------------------------+
-|                                      FASTAPI BACKEND RUNTIME                                     |
-|  +------------------+  +-------------------+  +------------------+  +------------------------+  |
-|  | Request Logging  |  | RBAC & Security   |  | API Router Layer |  | Versioned Risk Config  |  |
-|  | & Traceability   |  | (Viewer/Op/Admin) |  | (10 Core Modules)|  | (risk_config.yaml)    |  |
-|  +------------------+  +-------------------+  +------------------+  +------------------------+  |
-+-------------------------------------------------------------------------------------------------+
-          |                                      |                                    |
-          v                                      v                                    v
-+-----------------------+              +-----------------------+            +---------------------+
-| DATA PROVIDER LAYER   |              | RISK & HAZARD ENGINE  |            | REASONING & ALERTS  |
-| • DemoCycloneProvider |              | • HazardEngine        |            | • GeminiService     |
-| • IBTrACSProvider     |              |   (Wind, Rain, Surge) |            |   (Google GenAI SDK)|
-| • OpenMeteo ECMWF     |              | • ExposureEngine      |            | • AlertService      |
-| • EarthEngineService  |              |   (Population, Assets)|            |   (Human-in-the-loop|
-| • INCOIS Surge /      |              | • VulnerabilityEngine |            |   Approval Workflow)|
-|   Scenario Proxy      |              |   (Elevation, Distance|            | • ReportService     |
-| • GeoJSONInfraProvider|              | • ConfidenceEngine    |            |   (PDF, CSV, JSON)  |
-| • DryRunNotification  |              | • ScenarioEngine      |            +---------------------+
-+-----------------------+              +-----------------------+                       |
-          |                                      |                                     |
-          v                                      v                                     v
-+-------------------------------------------------------------------------------------------------+
-|                                    PERSISTENCE & STORAGE                                        |
-|   • PostgreSQL 16 + PostGIS (Production Spatial Storage) / SQLite + Shapely Spatial Layer       |
-|   • Versioned Config: config/risk_config.yaml                                                   |
-|   • Demo Dataset Repository: /data/demo/                                                        |
-+-------------------------------------------------------------------------------------------------+
+                                CYCLONE-X V2
+                     GLOBAL DISASTER INTELLIGENCE PLATFORM
+
+               ┌───────────────────────────────────────────────┐
+               │              Observation Layer                │
+               │  Sentinel-1 SAR / Sentinel-2 / AWS / IBTrACS  │
+               └───────────────────────┬───────────────────────┘
+                                       │
+               ┌───────────────────────▼───────────────────────┐
+               │               Forecast Layer                  │
+               │ WeatherNext 3 / WeatherNext Cyclones / ECMWF  │
+               └───────────────────────┬───────────────────────┘
+                                       │
+               ┌───────────────────────▼───────────────────────┐
+               │           Ensemble Fusion Layer               │
+               │   64-Member Ensembles / Spread / Consensus    │
+               └───────────────────────┬───────────────────────┘
+                                       │
+               ┌───────────────────────▼───────────────────────┐
+               │            Hazard Field Engine                │
+               │ Wind Footprint / Gridded Rain / Tide + Surge  │
+               └───────────────────────┬───────────────────────┘
+                                       │
+               ┌───────────────────────▼───────────────────────┐
+               │        Exposure & Vulnerability Engine        │
+               │  WorldPop 100m / Lifelines / Fragility Curves │
+               └───────────────────────┬───────────────────────┘
+                                       │
+               ┌───────────────────────▼───────────────────────┐
+               │       Impact Probability & Risk Engine        │
+               │   P(Wind) / P(Rain) / P(Flood) / Cascading    │
+               └───────────────────────┬───────────────────────┘
+                                       │
+               ┌───────────────────────▼───────────────────────┐
+               │              Decision Support                 │
+               │   What-If Scenarios / Early Actions / Alerts  │
+               └───────────────────────┬───────────────────────┘
+                                       │
+               ┌───────────────────────▼───────────────────────┐
+               │        Grounded Gemini AI Copilot V2          │
+               │     14 Deterministic Backend Tools & Schema   │
+               └───────────────────────────────────────────────┘
 ```
 
 ---
 
-## 3. Core Features & Capabilities
+## 3. Enterprise Data Classification Layers (Section 5)
 
-| Module | Operational Capability | Data Distinction |
+Every record displayed on the frontend or served via API is explicitly stamped with its scientific data classification:
+
+| Classification | Meaning & Display Badge | Scientific Rule |
 | :--- | :--- | :--- |
-| **Command Center** | Single-pane-of-glass overview with real-time metrics, interactive MapLibre GL map, Context Brief, and Top Priority Zones table. | `MODEL_OUTPUT` |
-| **Cyclone Monitor** | Interactive forecast step timeline slider (`+0h`, `+6h`, `+12h`, `+18h Landfall`, `+24h`, `+36h`, `+48h`, `+72h`), comparing observed tracks with forward forecast cones. | `OBSERVATION` vs `FORECAST` |
-| **Risk Analysis** | Transparent formula and active weights inspection ($50\%$ Hazard, $30\%$ Exposure, $20\%$ Vulnerability), multi-dimensional data confidence breakdown ($74\%$). | `MODEL_OUTPUT` |
-| **Infrastructure** | Critical asset inventory (District Hospitals, 400kV Substations, Cyclone Shelters, Bridges) with elevation, primary threat, and nearest backup facility. | `OBSERVATION` |
-| **Scenario Simulator** | Real-time stress-testing with sliders for wind ($0.5\times-2.0\times$), rain ($0.5\times-2.5\times$), surge ($0-6\text{m}$), and track shifts, generating Before vs After vs Delta comparisons. | `SCENARIO` |
-| **Alert Center** | 4-stage human clearance workflow (`DRAFT → REVIEW → APPROVE → DISPATCH`) with multilingual translations in English, Hindi, Odia, Telugu, and Bengali. | `MODEL_OUTPUT` |
-| **AI Copilot** | Gemini multimodal reasoning using official `google-genai` SDK with strict scientific guardrails and satellite C-band SAR feature classification (`OBSERVED`, `POSSIBLE`, `UNKNOWN`). | `AI_INTERPRETATION` |
-| **Incident Reports** | Publication-grade executive briefing generator with direct export to PDF, CSV, JSON, and GeoJSON. | `MODEL_OUTPUT` |
-| **Data Sources** | Attribution registry detailing providers, resolution, temporal coverage, and Google Earth Engine live setup guide. | `OBSERVATION` |
-| **Settings** | Operational mode toggle (`DEMO` vs `LIVE`), model selector (`gemini-3.7-flash` / `3.8`), role-based clearance switcher, and risk weight sliders. | `SYSTEM` |
+| `OBSERVATION` | Ground-truth measurements | Instrument-observed telemetry (AWS, Radar, Sentinel-1 SAR). |
+| `FORECAST` | Operational deterministic runs | Forward NWP model predictions (IMD / ECMWF deterministic). |
+| `ENSEMBLE` | Perturbed multi-member spread | 64-member WeatherNext 3 dispersion and percentile plumes. |
+| `HISTORICAL` | Validated reanalysis | Post-season ground truth from NOAA IBTrACS for backtesting. |
+| `MODEL_OUTPUT` | Gridded spatial fields | Calculated hazard cores, spatial track density grids. |
+| `SCENARIO` | What-If simulations | Parameter perturbations; **prominently marked as not official**. |
+| `AI_INTERPRETATION` | Gemini reasoning outputs | Multimodal synthesis strictly grounded in backend evidence. |
+| `OFFICIAL_ADVISORY` | Approved civil defense alerts | Human-reviewed and authorized warnings. |
+| `DEMO` | Offline sandbox data | Calibrated simulation; zero external dependencies. |
 
 ---
 
-## 4. Technology Stack
+## 4. Interactive Map Modes (10 Modes)
 
-### Frontend
-- **Framework**: Next.js 16 (App Router) with React 19 & TypeScript
-- **Styling**: Tailwind CSS v4 with dark command-center aesthetic
-- **Geospatial Mapping**: MapLibre GL v6 with CartoDB Dark raster/vector tiles
-- **Icons**: Lucide React
-- **Data Flow**: Custom typed API client with offline caching
-
-### Backend
-- **Framework**: FastAPI with Pydantic v2 & Pydantic-Settings
-- **Geospatial Processing**: Shapely 2.1 & NumPy
-- **Satellite & Earth Engine**: `earthengine-api` (server-side authentication)
-- **AI & Multimodal**: Google GenAI SDK (`google-genai` 2.25+)
-- **Report Generation**: ReportLab 5.0 (PDF generation) & Pillow
-- **Configuration**: Versioned YAML (`risk_config.yaml`)
+The CYCLONE-X Command Center UI features 10 specialized geospatial modes:
+1. `TRACK`: Official IMD forecast track, cone of uncertainty, and historical observations.
+2. `ENSEMBLE`: 64 individual perturbed member tracks rendered with lead-time color gradients.
+3. `DENSITY`: Spatial track density heatmap displaying member occupancy fraction (e.g. *"48 of 64 members (75.0%)"*).
+4. `WIND`: Gridded wind core footprints ($>100\text{ km/h}, >140\text{ km/h}, >180\text{ km/h}$).
+5. `RAINFALL`: Precipitation exceedance probabilities ($P(\text{rain} > 100\text{mm}), P(\text{rain} > 200\text{mm})$).
+6. `FLOOD`: Three-way decomposed water level (astronomical tide + storm surge + wave setup).
+7. `IMPACT`: Asset-level multi-hazard impact probability heatmap.
+8. `INFRASTRUCTURE`: Critical lifeline nodes (hospitals, substations, shelters, bridges) with real-time risk cards.
+9. `POPULATION`: Spatial distribution of vulnerable citizens exposed to severe hazard thresholds.
+10. `FORECAST CHANGE`: Visual comparison between current (18Z) and previous (12Z) forecast runs showing track shifts.
 
 ---
 
-## 5. Dataset Attribution & Sources
+## 5. Security & Role-Based Access Control (RBAC)
 
-| Dataset | Provider | Usage in CYCLONE-X | License |
-| :--- | :--- | :--- | :--- |
-| **NOAA IBTrACS v04r00** | NOAA / NCEI | Historical cyclone best-track validation | Public Domain |
-| **ECMWF IFS 0.25°** | ECMWF via Open-Meteo | Hourly wind speed, gusts, 24h precipitation, surface pressure | Open Data |
-| **Copernicus Sentinel-1** | ESA via Earth Engine | 10m C-band SAR radar for all-weather flood change detection | CC-BY 3.0 |
-| **NASA NASADEM 30m** | NASA LP DAAC | Digital Elevation Model for coastal terrain susceptibility | Public Domain |
-| **JRC Surface Water** | European Commission | 38-year permanent and seasonal surface water baseline | ODbL |
-| **WorldPop Global 100m** | University of Southampton | Demographic exposure estimation across risk tiers | CC-BY 4.0 |
-| **GHSL Built-Up** | European Commission JRC | Spatial concentration of built human settlements | Open Data |
+The platform enforces strict server-side RBAC across 4 operational tiers:
+- **`VIEWER`** (Level 1): Read-only observation of tracks, maps, and generated briefs.
+- **`OPERATOR`** (Level 2): Viewer rights + What-If scenario execution and alert drafting.
+- **`REVIEWER`** (Level 3): Operator rights + Formal scientific review and approval of advisory drafts.
+- **`ADMIN`** (Level 4): Reviewer rights + Dispatch authorization and data source configuration.
+
+> **Zero Hardcoded Secrets**: All credentials and API keys have been audited and eliminated. Carto retina basemaps and simulated demo feeds load with zero configuration.
 
 ---
 
-## 6. Environment Configuration (`.env.example`)
+## 6. Quickstart Guide
 
+### Option A: Local Development (FastAPI + Next.js)
+
+#### 1. Clone & Setup Backend
 ```bash
-# Application Mode: 'demo' (offline simulated data) or 'live' (real API queries)
-APP_MODE=demo
-DEBUG=true
+git clone https://github.com/Pirate-debugger/Cyclone-X---B-w-AI.git
+cd Cyclone-X---B-w-AI
 
-# Server Configuration
-HOST=0.0.0.0
-PORT=8000
-NEXT_PUBLIC_API_URL=http://localhost:8000
-
-# Database Configuration (PostGIS for production Docker)
-DATABASE_URL=postgresql://cyclonex:cyclonex_secret@db:5432/cyclonex_db
-
-# Google Gemini AI Configuration
-GEMINI_API_KEY=
-GEMINI_MODEL=gemini-3.7-flash
-
-# Google Earth Engine Configuration
-GOOGLE_CLOUD_PROJECT=
-EARTH_ENGINE_PROJECT=
-GOOGLE_APPLICATION_CREDENTIALS=
-
-# Weather Service Configuration
-WEATHER_PROVIDER=open-meteo
-OPEN_METEO_BASE_URL=https://api.open-meteo.com/v1/forecast
-
-# Map Provider
-MAP_PROVIDER=carto-dark
-```
-
----
-
-## 7. How to Run Locally
-
-### Prerequisites
-- Python 3.12+ (or 3.13 / 3.14)
-- Node.js 18+ and npm
-
-### Step 1: Clone Repository
-```bash
-git clone https://github.com/your-org/cyclone-x.git
-cd cyclone-x
-```
-
-### Step 2: Backend Setup
-```bash
 # Create virtual environment
 python -m venv .venv
-
-# Activate virtual environment
-# Windows:
-.venv\Scripts\activate
-# Linux/macOS:
-source .venv/bin/activate
+source .venv/bin/activate  # On Windows: .\.venv\Scripts\activate
 
 # Install dependencies
 pip install -r backend/requirements.txt
 
-# Run backend API server
-# Windows PowerShell:
-$env:PYTHONPATH="backend"; uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
-# Linux/macOS:
-PYTHONPATH=backend uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
-```
-The backend API and Swagger docs will be live at `http://localhost:8000/docs`.
+# Initialize database schema & demo seed data
+python backend/app/db/init_db.py
 
-### Step 3: Frontend Setup
+# Launch FastAPI Backend (Port 8000)
+uvicorn app.main:app --app-dir backend --reload --port 8000
+```
+
+#### 2. Setup Frontend
 ```bash
 cd frontend
 
-# Install dependencies
+# Install Node modules
 npm install
 
-# Start Next.js development server
+# Start Next.js Development Server (Port 3000)
 npm run dev
 ```
-The Command Center dashboard will be accessible at `http://localhost:3000`.
+Open [http://localhost:3000](http://localhost:3000) to access the Command Center.
 
 ---
 
-## 8. Docker Deployment
-
-To launch the full production environment with PostgreSQL 16 + PostGIS, FastAPI backend, and Next.js frontend:
+### Option B: Docker Compose (Full Stack with PostgreSQL + PostGIS)
 
 ```bash
-docker compose up --build -d
+docker-compose up --build -d
 ```
-
-- Frontend: `http://localhost:3000`
-- Backend API: `http://localhost:8000`
-- PostGIS Database: `localhost:5432`
+Services initialized:
+- `backend`: FastAPI runtime on port 8000
+- `frontend`: Next.js web application on port 3000
+- `db`: PostgreSQL 16 with PostGIS extension on port 5432
+- `cache`: Redis 7 on port 6379
 
 ---
 
-## 9. Testing & Quality Assurance
+## 7. Automated Testing Suite
 
-CYCLONE-X includes automated unit and integration tests covering the HazardEngine, ExposureEngine, VulnerabilityEngine, ConfidenceEngine, ScenarioEngine, and all FastAPI endpoints:
+The repository includes a comprehensive 20-test automated suite covering API endpoints, risk calculation, scientific ensemble bounds, unit normalizations, scenario immutability, and RBAC enforcement:
 
 ```bash
-# Run pytest test suite
-$env:PYTHONPATH="backend"; .venv\Scripts\pytest -v tests
+pytest -v
 ```
-Result: **12 passed in 2.5s**.
+
+```
+tests/test_api_endpoints.py::test_health_endpoint PASSED
+tests/test_api_endpoints.py::test_mode_endpoint PASSED
+tests/test_api_endpoints.py::test_events_endpoint PASSED
+tests/test_api_endpoints.py::test_track_endpoint PASSED
+tests/test_api_endpoints.py::test_risk_endpoints PASSED
+tests/test_api_endpoints.py::test_scenario_run PASSED
+tests/test_api_endpoints.py::test_ai_copilot_fallback PASSED
+tests/test_api_endpoints.py::test_reports_generation PASSED
+tests/test_risk_engine.py::test_hazard_engine_normalization PASSED
+tests/test_risk_engine.py::test_confidence_engine PASSED
+tests/test_risk_engine.py::test_vulnerability_engine PASSED
+tests/test_risk_engine.py::test_risk_engine_banding PASSED
+tests/test_v2_scientific_engine.py::test_ensemble_aggregation_probabilities PASSED
+tests/test_v2_scientific_engine.py::test_ensemble_members_data_integrity PASSED
+tests/test_v2_scientific_engine.py::test_weathernext_unit_normalization PASSED
+tests/test_v2_scientific_engine.py::test_model_consensus_no_arbitrary_winner PASSED
+tests/test_v2_scientific_engine.py::test_scenario_immutability_and_disclaimer PASSED
+tests/test_v2_scientific_engine.py::test_asset_impact_probabilities PASSED
+tests/test_v2_scientific_engine.py::test_forecast_evolution_temporal_revision PASSED
+tests/test_v2_scientific_engine.py::test_rbac_alert_review_and_dispatch PASSED
+
+======================= 20 passed in 2.66s =======================
+```
 
 ---
 
-## 10. Role-Based Access Control (RBAC)
-
-Pre-seeded demo credentials for testing:
-- **Viewer** (`role:viewer`): Read-only observation of tracks, layers, and telemetry.
-- **Operator** (`role:operator`): Can run what-if scenarios, draft advisories, and approve alerts.
-- **Admin** (`role:admin`): Can override prototype policy weights and manage critical assets.
-
----
-
-## 11. Scientific Honesty & Limitations
-
-- **Prototype Decision Support**: All risk scores ($0-100$) are prototype decision-support approximations and not officially certified government forecasts.
-- **Scenario Surge Proxy**: In the absence of an official INCOIS hydrodynamic surge bulletin, coastal inundation is evaluated via a topographic proxy and clearly labeled as such.
-- **Demographic Projections**: Population exposure uses WorldPop 100m gridded projections, not real-time census tallies.
-- **Zero Hallucination Guardrails**: Gemini AI receives grounded structured context from the backend and is forbidden from inventing coordinates, wind speeds, or casualties.
+## 8. Technical Documentation
+- **[Model Cards Specification](docs/models.md)**: WeatherNext 3, WeatherNext Cyclones, ECMWF IFS 0.25°, Consensus Engine.
+- **[Data Catalog & Provenance](docs/data.md)**: Sentinel-1 SAR, Sentinel-2 MSI, NASADEM 30m, WorldPop, IBTrACS.
+- **[Risk Model V2 Specification](docs/risk_model_v2.md)**: Mathematical formulations, hazard decomposition, fragility curves.
+- **[Security Audit Report](docs/security_audit.md)**: Secret elimination audit, RBAC enforcement, credential management.
 
 ---
 
-## 12. License
-
-Apache 2.0 License. Developed for disaster-risk resilience and decision support across the Bay of Bengal and coastal APAC.
+## 9. Scientific Disclaimer & Intended Use
+CYCLONE-X is a disaster-risk decision-support system intended for authorized emergency planning and meteorological evaluation. It does not replace official bulletins from national meteorological agencies (e.g. IMD, RSMC New Delhi, JTWC, WMO). Modeled scenario simulations and AI copilot interpretations must always undergo human review before public civil protection advisories are authorized.

@@ -38,6 +38,9 @@ service-account*.json
 # Temporary / Scratch
 tile_test_*.png
 *.log
+*.db
+*.sqlite
+*.sqlite3
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*

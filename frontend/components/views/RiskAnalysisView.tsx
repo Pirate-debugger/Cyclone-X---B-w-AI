@@ -173,7 +173,7 @@ export const RiskAnalysisView: React.FC<RiskAnalysisViewProps> = ({ riskData }) 
             Transparent Limitations & Penalty Breakdown:
           </span>
           <div className="space-y-1.5 text-slate-400 text-[11px]">
-            {confidence?.limiting_factors.map((factor, idx) => (
+            {confidence?.limiting_factors?.map((factor: string, idx: number) => (
               <p key={idx} className="flex items-start gap-2">
                 <span className="text-amber-400 font-bold shrink-0">•</span>
                 <span>{factor}</span>

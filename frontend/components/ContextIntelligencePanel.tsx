@@ -166,7 +166,7 @@ export const ContextIntelligencePanel: React.FC<ContextIntelligencePanelProps> =
 
         <div className="space-y-1 text-[10px] text-slate-400">
           <p className="font-semibold text-slate-300">Confidence Limiting Factors:</p>
-          {confidence?.limiting_factors.slice(0, 3).map((f, i) => (
+          {confidence?.limiting_factors?.slice(0, 3).map((f: string, i: number) => (
             <p key={i} className="flex items-start gap-1">
               <span className="text-amber-500 shrink-0">•</span>
               <span className="leading-tight">{f}</span>

@@ -24,3 +24,20 @@ async def get_weather(
             data_classification=DataClassification.FORECAST
         )
     )
+
+@router.get("/track")
+async def get_weather_track(event_id: str = Query("DEMO-TC-2026-ALPHA")):
+    """Bridge endpoint for track data under weather prefix."""
+    from app.providers.cyclone_provider import DemoCycloneProvider, IBTrACSProvider
+    if "HIST" in event_id:
+        track = await IBTrACSProvider().get_track(event_id)
+    else:
+        track = await DemoCycloneProvider().get_track(event_id)
+    return APIResponse(
+        data=track,
+        meta=ResponseMeta(
+            source=track.source,
+            data_classification=DataClassification.FORECAST if track.forecast_track else DataClassification.HISTORICAL
+        )
+    )
+

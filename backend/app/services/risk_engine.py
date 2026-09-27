@@ -1,4 +1,5 @@
 from typing import List, Dict, Any, Optional
+from datetime import datetime, timezone
 from shapely.geometry import shape, Point, Polygon
 from app.core.config import settings
 from app.models.schemas import (
@@ -138,12 +139,13 @@ class RiskEngine:
         avg_exp = int(round(sum(h.exposure_score for h in hotspots) / max(1, len(hotspots))))
         avg_vuln = int(round(sum(h.vulnerability_score for h in hotspots) / max(1, len(hotspots))))
 
+        now_iso = datetime.now(timezone.utc).isoformat()
         return RiskOverview(
             event_id=event_id,
-            model_version=self.config.get("model_version", "CYCLONE-X Risk Engine v1.0"),
-            disclaimer=self.config.get("disclaimer", "Prototype decision-support output — not an official warning."),
+            model_version=self.config.get("model_version", "CYCLONE-X Risk Engine v2.0"),
+            disclaimer=self.config.get("disclaimer", "Decision-support output — not an official government warning."),
             data_classification="MODEL_OUTPUT",
-            calculated_at="2026-09-27T00:30:00Z",
+            calculated_at=now_iso,
             weights=self.risk_weights,
             overall_metrics={
                 "overall_risk_score": avg_risk,
