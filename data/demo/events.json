@@ -1,0 +1,24 @@
+[
+  {
+    "event_id": "DEMO-TC-2026-ALPHA",
+    "name": "DEMO CYCLONE ALPHA",
+    "basin": "North Indian Ocean (Bay of Bengal)",
+    "category": "Very Severe Cyclonic Storm (VSCS)",
+    "current_lat": 18.35,
+    "current_lon": 86.65,
+    "max_sustained_wind_kmh": 155.0,
+    "max_gust_kmh": 185.0,
+    "central_pressure_hpa": 968.0,
+    "movement_direction": "North-Northwest (NNW)",
+    "movement_speed_kmh": 18.5,
+    "status": "Active / Approaching Coast",
+    "data_classification": "DEMO DATA",
+    "source": "Simulated IMD/JTWC Protocol",
+    "timestamp": "2026-09-27T00:00:00Z",
+    "valid_until": "2026-09-27T06:00:00Z",
+    "forecast_horizon": "72h",
+    "estimated_landfall_time": "2026-09-27T18:00:00Z",
+    "estimated_landfall_location": "Near Puri - Astaranga Coast (Odisha, India)",
+    "notes": "Simulated scenario for disaster risk & infrastructure vulnerability assessment. DEMO MODE ONLY."
+  }
+]

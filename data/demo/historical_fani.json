@@ -1,0 +1,22 @@
+{
+  "event_id": "HIST-2019-FANI",
+  "name": "EXTREMELY SEVERE CYCLONIC STORM FANI",
+  "basin": "North Indian Ocean (Bay of Bengal)",
+  "year": 2019,
+  "category": "Extremely Severe Cyclonic Storm",
+  "data_classification": "HISTORICAL",
+  "source": "NOAA IBTrACS v04r00",
+  "landfall_date": "2019-05-03",
+  "landfall_location": "Puri, Odisha, India",
+  "peak_wind_kmh": 215.0,
+  "min_pressure_hpa": 932.0,
+  "disclaimer": "Historical analysis data — not a current or active forecast.",
+  "track": [
+    { "timestamp": "2019-04-27T00:00:00Z", "latitude": 5.2, "longitude": 88.5, "wind_kmh": 55.0, "pressure_hpa": 1002.0, "data_type": "HISTORICAL" },
+    { "timestamp": "2019-04-29T00:00:00Z", "latitude": 8.5, "longitude": 86.8, "wind_kmh": 85.0, "pressure_hpa": 994.0, "data_type": "HISTORICAL" },
+    { "timestamp": "2019-05-01T00:00:00Z", "latitude": 13.8, "longitude": 84.5, "wind_kmh": 165.0, "pressure_hpa": 960.0, "data_type": "HISTORICAL" },
+    { "timestamp": "2019-05-02T00:00:00Z", "latitude": 16.5, "longitude": 84.8, "wind_kmh": 205.0, "pressure_hpa": 938.0, "data_type": "HISTORICAL" },
+    { "timestamp": "2019-05-03T03:00:00Z", "latitude": 19.8, "longitude": 85.8, "wind_kmh": 215.0, "pressure_hpa": 932.0, "data_type": "HISTORICAL" },
+    { "timestamp": "2019-05-04T00:00:00Z", "latitude": 22.4, "longitude": 87.5, "wind_kmh": 90.0, "pressure_hpa": 986.0, "data_type": "HISTORICAL" }
+  ]
+}

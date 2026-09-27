@@ -1,0 +1,110 @@
+# CYCLONE-X Risk & Hazard Configuration
+# All thresholds and weights are configurable policy and prototype assumptions.
+# Every parameter is documented with its basis (source, policy, or prototype).
+
+model_version: "CYCLONE-X Risk Engine v1.0"
+disclaimer: "Prototype decision-support output — not an official warning."
+
+# Top-level Risk Composition Weights
+# prototype assumption: overall_risk = hazard * 0.50 + exposure * 0.30 + vulnerability * 0.20
+risk_weights:
+  hazard: 0.50         # basis: prototype assumption (reflects acute physical threat)
+  exposure: 0.30       # basis: prototype assumption (criticality and human settlement)
+  vulnerability: 0.20  # basis: prototype assumption (terrain, elevation, baseline susceptibility)
+
+# Hazard Sub-Factor Weights
+hazard_weights:
+  wind: 0.40           # basis: prototype assumption
+  rainfall: 0.30       # basis: prototype assumption
+  inundation: 0.30     # basis: prototype assumption (storm surge proxy or observed inundation)
+
+# Wind Hazard Thresholds (km/h)
+# basis: Saffir-Simpson & IMD (India Meteorological Department) cyclone classification scale
+wind_thresholds:
+  gale_force_min: 62.0     # Deep Depression / Tropical Storm onset
+  cyclonic_storm_min: 88.0 # Severe Cyclonic Storm
+  very_severe_min: 118.0   # Very Severe Cyclonic Storm / Cat 1 Hurricane
+  extremely_severe_min: 166.0 # Extremely Severe Cyclonic Storm / Cat 3
+  super_cyclone_min: 222.0 # Super Cyclone / Cat 5
+  max_reference_kmh: 260.0 # Upper scaling bound for 100% normalized score
+
+# Rainfall Hazard Thresholds (mm / 24hr cumulative)
+# basis: IMD precipitation warning criteria
+rainfall_thresholds:
+  moderate_mm: 64.5        # Heavy rainfall advisory threshold
+  very_heavy_mm: 115.5     # Very heavy rainfall
+  extremely_heavy_mm: 204.5 # Extremely heavy rainfall warning
+  exceptional_mm: 350.0    # Catastrophic inundation scaling max
+
+# Storm Surge & Coastal Inundation Thresholds (meters)
+# basis: INCOIS coastal surge vulnerability guidelines & scenario proxy
+surge_thresholds:
+  low_surge_m: 0.5
+  moderate_surge_m: 1.5
+  high_surge_m: 3.0
+  severe_surge_m: 5.0
+  max_reference_m: 7.0
+
+# Elevation Susceptibility (NASADEM meters above sea level)
+# basis: Coastal low-lying flood risk modeling
+elevation_thresholds:
+  critically_low_m: 2.0    # Extreme susceptibility to surge & backwater
+  low_m: 5.0               # High flood susceptibility
+  moderate_m: 10.0         # Moderate elevation
+  safe_baseline_m: 30.0    # Negligible coastal surge threat
+
+# Coastal Proximity Thresholds (kilometers from shoreline)
+# basis: Cyclone landfall coastal impact zone
+coastal_distance_thresholds:
+  immediate_coast_km: 5.0  # Acute storm surge zone
+  near_coast_km: 15.0      # Coastal belt
+  inland_boundary_km: 50.0 # Maximum direct maritime surge influence
+
+# Default Infrastructure Criticality Scores (0 - 100)
+# basis: Prototype policy assumptions (configurable by admin/operator)
+infrastructure_criticality:
+  hospital: 95
+  primary_health_centre: 90
+  power_station: 95
+  electricity_substation: 90
+  major_road: 80
+  bridge: 85
+  railway: 80
+  airport: 80
+  emergency_shelter: 90
+  water_facility: 90
+  communication_facility: 85
+  government_facility: 60
+
+# Risk Bands (0 - 100)
+# basis: Emergency response operational escalation levels
+risk_bands:
+  low:
+    min: 0
+    max: 24
+    label: "LOW"
+    action_guidance: "Monitor weather updates and maintain standard readiness."
+  moderate:
+    min: 25
+    max: 49
+    label: "MODERATE"
+    action_guidance: "Inspect critical drainages, brief emergency teams, alert standby staff."
+  high:
+    min: 50
+    max: 74
+    label: "HIGH"
+    action_guidance: "Pre-position rescue teams, ready emergency shelters, verify generator fuel at hospitals."
+  severe:
+    min: 75
+    max: 100
+    label: "SEVERE"
+    action_guidance: "Recommend priority evacuation of low-lying zones, deploy NDRF/SDRF, secure critical lifelines."
+
+# Confidence Penalty Weights
+# basis: Quality-weighted data completeness and freshness metric
+confidence_penalties:
+  missing_surge_input: 15.0
+  stale_satellite_over_24h: 12.0
+  coarse_weather_resolution: 8.0
+  incomplete_infrastructure: 10.0
+  missing_radar_observations: 10.0

@@ -1,0 +1,178 @@
+{
+  "event_id": "DEMO-TC-2026-ALPHA",
+  "model_version": "CYCLONE-X Risk Engine v1.0",
+  "disclaimer": "Prototype decision-support output — not an official warning.",
+  "data_classification": "DEMO DATA",
+  "calculated_at": "2026-09-27T00:30:00Z",
+  "weights": {
+    "hazard": 0.50,
+    "exposure": 0.30,
+    "vulnerability": 0.20
+  },
+  "overall_metrics": {
+    "overall_risk_score": 82,
+    "risk_band": "SEVERE",
+    "hazard_score": 86,
+    "exposure_score": 81,
+    "vulnerability_score": 76,
+    "confidence_score": 74,
+    "data_type": "MODEL_OUTPUT",
+    "primary_threat_window": "2026-09-27T12:00:00Z to 2026-09-28T06:00:00Z",
+    "closest_approach_time": "2026-09-27T18:00:00Z (Landfall)",
+    "closest_approach_area": "Puri - Astaranga Coastal Belt"
+  },
+  "confidence_breakdown": {
+    "score": 74,
+    "data_completeness": 85,
+    "source_freshness": 78,
+    "temporal_consistency": 82,
+    "spatial_coverage": 80,
+    "limiting_factors": [
+      "Sentinel-1 SAR observation is 12 hours prior to current forecast cycle",
+      "Using Scenario Inundation Proxy (+2.2m) — official INCOIS hydrodynamic surge bulletin pending",
+      "Infrastructure inventory reflects open data and demo assets; some rural primary feeders unmapped",
+      "Global weather forecast grid (9km ECMWF) requires local coastal downscaling"
+    ]
+  },
+  "population_exposure": {
+    "total_exposed": 72600,
+    "dataset": "WorldPop 100m (2020 projection)",
+    "note": "Estimated population within modeled risk zones — not live census counts.",
+    "by_tier": {
+      "low": 14220,
+      "moderate": 32410,
+      "high": 18125,
+      "severe": 7845
+    }
+  },
+  "top_priority_zones": [
+    {
+      "zone_id": "ZONE-PURI-COAST",
+      "name": "Puri South & Coastal Belt",
+      "administrative_area": "Puri District, Odisha",
+      "risk_score": 88,
+      "risk_band": "SEVERE",
+      "hazard_score": 92,
+      "exposure_score": 86,
+      "vulnerability_score": 82,
+      "top_hazard": "Extreme Wind (165 km/h) & Storm Surge Inundation (+2.4m)",
+      "critical_assets_count": 5,
+      "exposed_assets": [
+        "District Headquarters Hospital Puri",
+        "Samuka Coastal Power Switching Station",
+        "Puri Coastal Emergency Telecom Tower",
+        "Puri Urban Water Treatment & Pumping Station",
+        "Kushabhadra River Coastal Bridge"
+      ],
+      "population_estimate": 4350,
+      "suggested_action": "Evacuate low-lying coastal wards within 2km of sea to multi-purpose cyclone shelters; secure backup diesel generators at District Hospital.",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [85.78, 19.76],
+            [85.86, 19.79],
+            [85.88, 19.85],
+            [85.81, 19.86],
+            [85.76, 19.81],
+            [85.78, 19.76]
+          ]
+        ]
+      }
+    },
+    {
+      "zone_id": "ZONE-ASTARANGA",
+      "name": "Astaranga - Devi River Estuary",
+      "administrative_area": "Puri District, Odisha",
+      "risk_score": 85,
+      "risk_band": "SEVERE",
+      "hazard_score": 90,
+      "exposure_score": 82,
+      "vulnerability_score": 84,
+      "top_hazard": "Severe Tidal Backwater Inundation & Gale Winds (150 km/h)",
+      "critical_assets_count": 2,
+      "exposed_assets": [
+        "Community Health Centre Astaranga",
+        "Astaranga Multipurpose Cyclone Shelter"
+      ],
+      "population_estimate": 3495,
+      "suggested_action": "Reinforce shelter stock; mobilize inflatable rescue boats; alert emergency medical teams at CHC Astaranga.",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [86.20, 19.92],
+            [86.32, 19.96],
+            [86.34, 20.03],
+            [86.23, 20.02],
+            [86.18, 19.95],
+            [86.20, 19.92]
+          ]
+        ]
+      }
+    },
+    {
+      "zone_id": "ZONE-PARADIP",
+      "name": "Paradip Port Industrial & Maritime Zone",
+      "administrative_area": "Jagatsinghpur District, Odisha",
+      "risk_score": 81,
+      "risk_band": "SEVERE",
+      "hazard_score": 84,
+      "exposure_score": 90,
+      "vulnerability_score": 72,
+      "top_hazard": "Port Surge, High Wind Gusts (180 km/h) & Industrial Flooding",
+      "critical_assets_count": 4,
+      "exposed_assets": [
+        "Paradip Port Trust Hospital",
+        "Paradip 400/220kV Grid Substation",
+        "Paradip Major Deepwater Seaport",
+        "Mahanadi Estuary Lifeline Bridge"
+      ],
+      "population_estimate": 6200,
+      "suggested_action": "Suspend maritime cargo operations; secure container cranes; place substation pumps on emergency duty.",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [86.62, 20.24],
+            [86.74, 20.25],
+            [86.75, 20.34],
+            [86.63, 20.35],
+            [86.59, 20.28],
+            [86.62, 20.24]
+          ]
+        ]
+      }
+    },
+    {
+      "zone_id": "ZONE-KONARK",
+      "name": "Konark Coastal Tourism & Fishery Belt",
+      "administrative_area": "Puri District, Odisha",
+      "risk_score": 72,
+      "risk_band": "HIGH",
+      "hazard_score": 78,
+      "exposure_score": 68,
+      "vulnerability_score": 65,
+      "top_hazard": "Coastal Surge Inundation & High Wind",
+      "critical_assets_count": 1,
+      "exposed_assets": [
+        "Konark Coastal Cyclone Relief Shelter"
+      ],
+      "population_estimate": 4850,
+      "suggested_action": "Clear beach areas; relocate artisanal fishing vessels to inland creeks; open Konark Relief Shelter.",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [86.08, 19.86],
+            [86.16, 19.88],
+            [86.18, 19.94],
+            [86.10, 19.95],
+            [86.06, 19.90],
+            [86.08, 19.86]
+          ]
+        ]
+      }
+    }
+  ]
+}

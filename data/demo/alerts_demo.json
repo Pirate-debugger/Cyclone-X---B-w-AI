@@ -1,0 +1,88 @@
+[
+  {
+    "id": "ALT-2026-001",
+    "event_id": "DEMO-TC-2026-ALPHA",
+    "type": "preparedness_advisory",
+    "title": "Severe Cyclone Preparedness Advisory: Puri & Jagatsinghpur Coastal Belts",
+    "urgency": "HIGH",
+    "status": "APPROVED",
+    "workflow_step": "APPROVE",
+    "created_at": "2026-09-27T01:00:00Z",
+    "author": "Operator (SEOC Odisha Desk)",
+    "reviewer": "Disaster Management Commissioner",
+    "approved_at": "2026-09-27T01:45:00Z",
+    "target_area": "Coastal Puri and Jagatsinghpur Districts (0-5km coastal corridor)",
+    "disclaimer": "Prototype decision-support output — not an official warning.",
+    "translations": {
+      "en": {
+        "title": "Severe Cyclone Preparedness Advisory: Puri & Jagatsinghpur",
+        "body": "DEMO CYCLONE ALPHA is forecast to make landfall near Puri-Astaranga coast around 18:00 UTC today with sustained winds of 150-165 km/h and scenario surge up to 2.4m. Authorities recommend immediate verification of emergency shelters, securing hospital backup power at Puri District Hospital, and preemptive evacuation of vulnerable low-lying settlements."
+      },
+      "hi": {
+        "title": "गंभीर चक्रवात तैयारी परामर्श: पुरी एवं जगतसिंहपुर",
+        "body": "डेमो चक्रवात अल्फा के आज 18:00 UTC के आसपास पुरी-अस्तारंग तट के निकट 150-165 किमी/घंटा की निरंतर हवाओं और 2.4 मीटर तक के परिदृश्य उछाल के साथ टकराने का पूर्वानुमान है। अधिकारियों को आपातकालीन आश्रयों के सत्यापन, पुरी जिला अस्पताल में बैकअप बिजली सुरक्षित करने और निचले इलाकों से सुरक्षित निकासी की सलाह दी जाती है।"
+      },
+      "or": {
+        "title": "ଭୟଙ୍କର ବାତ୍ୟା ପ୍ରସ୍ତୁତି ପରାମର୍ଶ: ପୁରୀ ଏବଂ ଜଗତସିଂହପୁର ଉପକୂଳ",
+        "body": "ଡେମୋ ବାତ୍ୟା ଆଲଫା ଆଜି ସନ୍ଧ୍ୟା ୧୮:୦୦ UTC ସମୟରେ ପୁରୀ-ଅସ୍ତରଙ୍ଗ ଉପକୂଳ ନିକଟରେ ୧୫୦-୧୬୫ କିମି/ଘଣ୍ଟା ବେଗରେ ସ୍ଥଳଭାଗ ଛୁଇଁବା ଆକଳନ କରାଯାଇଛି। ସମସ୍ତ ବହୁମୁଖୀ ବାତ୍ୟା ଆଶ୍ରୟସ୍ଥଳ ପ୍ରସ୍ତୁତ ରଖିବା, ପୁରୀ ଜିଲ୍ଲା ମୁଖ୍ୟ ଚିକିତ୍ସାଳୟରେ ବିଦ୍ୟୁତ ବ୍ୟବସ୍ଥା ନିଶ୍ଚିତ କରିବା ଏବଂ ତଳିଆ ଅଞ୍ଚଳରୁ ସ୍ଥାନାନ୍ତରଣ ପାଇଁ ପରାମର୍ଶ ଦିଆଯାଉଛି।"
+      },
+      "te": {
+        "title": "తీవ్ర తుఫాను సంసిద్ధత సలహా: పూరీ & జగత్‌సింగ్‌పూర్ తీర ప్రాంతం",
+        "body": "డెమో తుఫాను ఆల్ఫా ఈరోజు 18:00 UTC సమయంలో పూరీ-అస్తరంగ తీరం సమీపంలో 150-165 కిమీ/గం గాలులతో మరియు 2.4 మీటర్ల ఎత్తు వరకు ఎగసిపడే అలలతో తీరం దాటే అవకాశం ఉంది. అత్యవసర ఆశ్రయాలను సిద్ధం చేయాలని మరియు ముంపు ప్రాంతాల ప్రజలను సురక్షిత ప్రాంతాలకు తరలించాలని సూచించబడింది."
+      },
+      "bn": {
+        "title": "মারাত্মক ঘূর্ণিঝড় প্রস্তুতি পরামর্শ: পুরী ও জগৎসিংহপুর উপকূল",
+        "body": "ডেমো সাইক্লোন আলফা আজ সন্ধ্যা ১৮:০০ ইউটিসি নাগাদ পুরী-অস্তরঙ্গ উপকূলের কাছে ১৫০-১৬৫ কিমি/ঘণ্টা বেগে আছড়ে পড়ার পূর্বাভাস রয়েছে। জরুরি আশ্রয়কেন্দ্রগুলি প্রস্তুত রাখা, পুরী জেলা হাসপাতালে বিদ্যুৎ ব্যাকআপ নিশ্চিত করা এবং নিম্নাঞ্চলের বাসিন্দাদের সতর্কতামূলক স্থানান্তর করার পরামর্শ দেওয়া হচ্ছে।"
+      }
+    },
+    "delivery_channel": "DRY_RUN",
+    "delivery_status": "READY_FOR_DISPATCH",
+    "audit_trail": [
+      { "action": "DRAFT_CREATED", "user": "operator@cyclonex.internal", "timestamp": "2026-09-27T01:00:00Z" },
+      { "action": "REVIEW_REQUESTED", "user": "operator@cyclonex.internal", "timestamp": "2026-09-27T01:15:00Z" },
+      { "action": "APPROVED", "user": "commissioner@odisha-disaster.gov.in", "timestamp": "2026-09-27T01:45:00Z" }
+    ]
+  },
+  {
+    "id": "ALT-2026-002",
+    "event_id": "DEMO-TC-2026-ALPHA",
+    "type": "infrastructure_alert",
+    "title": "Critical Infrastructure Flash Alert: Paradip Power Substation & Port Lifelines",
+    "urgency": "SEVERE",
+    "status": "REVIEW",
+    "workflow_step": "REVIEW",
+    "created_at": "2026-09-27T02:10:00Z",
+    "author": "Operator (Lifeline Monitoring Team)",
+    "reviewer": "Pending Chief Electrical Inspector",
+    "target_area": "Paradip Industrial Port Basin",
+    "disclaimer": "Prototype decision-support output — not an official warning.",
+    "translations": {
+      "en": {
+        "title": "Critical Infrastructure Alert: Paradip 400kV Substation",
+        "body": "Forecast gusts exceeding 190 km/h and scenario coastal surge +2.2m threaten low-elevation switchyard at Paradip 400kV Grid Substation. Recommend immediate sealing of control rooms, emergency fuel top-up for auxiliary pumps, and preemptive load shed on vulnerable coastal 33kV lines."
+      },
+      "hi": {
+        "title": "महत्वपूर्ण बुनियादी ढांचा चेतावनी: पारादीप 400kV सबस्टेशन",
+        "body": "190 किमी/घंटा से अधिक की तेज हवाएं और 2.2 मीटर का परिदृश्य उछाल पारादीप ग्रिड सबस्टेशन के निचले स्विचयार्ड को खतरे में डाल सकता है। सहायक पंपों के लिए ईंधन और नियंत्रण कक्ष की सुरक्षा की तत्काल सिफारिश की जाती है।"
+      },
+      "or": {
+        "title": "ଗୁରୁତ୍ୱପୂର୍ଣ୍ଣ ଭିତ୍ତିଭୂମି ସତର୍କତା: ପାରାଦ୍ୱୀପ ୪୦୦ କେଭି ଗ୍ରିଡ୍ ସବଷ୍ଟେସନ୍",
+        "body": "ଘଣ୍ଟାପ୍ରତି ୧୯୦ କିମିରୁ ଅଧିକ ବେଗରେ ପବନ ଓ ସମୁଦ୍ର ଜୁଆର ଯୋଗୁଁ ପାରାଦ୍ୱୀପ ଗ୍ରିଡ୍ ସବଷ୍ଟେସନରେ ଜଳବନ୍ଦୀ ଆଶଙ୍କା। ନିୟନ୍ତ୍ରଣ କକ୍ଷ ସୁରକ୍ଷିତ ରଖିବା ଓ ଜରୁରୀକାଳୀନ ପମ୍ପ ବ୍ୟବସ୍ଥା ପାଇଁ ପରାମର୍ଶ।"
+      },
+      "te": {
+        "title": "కీలక మౌలిక సదుపాయాల హెచ్చరిక: పారాదీప్ 400kV సబ్‌స్టేషన్",
+        "body": "190 కిమీ/గం వేగంతో వీచే ఈదురుగాలులు మరియు సముద్రపు అలల ప్రభావం వల్ల పారాదీప్ గ్రిడ్ సబ్‌స్టేషన్ ప్రభావితమయ్యే ప్రమాదం ఉంది."
+      },
+      "bn": {
+        "title": "জরুরি পরিকাঠামো সতর্কতা: পারাদ্বীপ ৪০০ কেভি গ্রিড সাবস্টেশন",
+        "body": "১৯০ কিমি/ঘণ্টার বেশি দমকা বাতাস এবং উপকূলীয় জলোচ্ছ্বাসের কারণে পারাদ্বীপ গ্রিড সাবস্টেশনের নিচু সুইচইয়ার্ড প্লাবিত হওয়ার ঝুঁকি রয়েছে।"
+      }
+    },
+    "delivery_channel": "DRY_RUN",
+    "delivery_status": "UNDER_REVIEW",
+    "audit_trail": [
+      { "action": "DRAFT_CREATED", "user": "operator@cyclonex.internal", "timestamp": "2026-09-27T02:10:00Z" },
+      { "action": "REVIEW_REQUESTED", "user": "operator@cyclonex.internal", "timestamp": "2026-09-27T02:25:00Z" }
+    ]
+  }
+]

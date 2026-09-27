@@ -1,0 +1,89 @@
+{
+  "datasets": [
+    {
+      "id": "s1-grd",
+      "name": "Copernicus Sentinel-1 SAR GRD",
+      "ee_asset_id": "COPERNICUS/S1_GRD",
+      "category": "SAR",
+      "purpose": "Flood & surface water change detection, cloud-independent observation",
+      "resolution": "10m",
+      "polarization": "VV + VH",
+      "instrument": "C-band Synthetic Aperture Radar",
+      "acquisition_time": "2026-09-26T12:15:30Z",
+      "freshness": "OBSERVATION • 12H AGO",
+      "status": "PROCESSED",
+      "source": "ESA / Copernicus Programme via Google Earth Engine",
+      "license": "Open Access (CC-BY)",
+      "water_change_detected_sqkm": 42.6,
+      "change_label": "Observed inundation candidate signal"
+    },
+    {
+      "id": "nasadem",
+      "name": "NASA NASADEM Digital Elevation Model",
+      "ee_asset_id": "NASA/NASADEM_HGT/001",
+      "category": "Elevation",
+      "purpose": "Terrain susceptibility, coastal low-lying elevation profiling",
+      "resolution": "30m",
+      "vertical_accuracy": "±5m",
+      "acquisition_time": "2000 (Reprocessed SRTM)",
+      "freshness": "BASELINE TERRAIN",
+      "status": "READY",
+      "source": "NASA LP DAAC via Google Earth Engine",
+      "license": "Public Domain",
+      "low_elevation_zone_sqkm": 315.4
+    },
+    {
+      "id": "jrc-water",
+      "name": "JRC Global Surface Water Occurrence",
+      "ee_asset_id": "JRC/GSW1_4/GlobalSurfaceWater",
+      "category": "Surface Water",
+      "purpose": "38-year historical water occurrence baseline & permanent water masking",
+      "resolution": "30m",
+      "acquisition_time": "1984 - 2021 Multi-decadal",
+      "freshness": "BASELINE HYDROLOGY",
+      "status": "READY",
+      "source": "European Commission Joint Research Centre (JRC)",
+      "license": "Open Data Commons (ODbL)"
+    },
+    {
+      "id": "dynamic-world",
+      "name": "Dynamic World 10m Land Cover",
+      "ee_asset_id": "GOOGLE/DYNAMICWORLD/V1",
+      "category": "Land Cover",
+      "purpose": "Near-real-time 10m land use & land cover classification (built, crops, water)",
+      "resolution": "10m",
+      "acquisition_time": "2026-09-25T04:45:00Z",
+      "freshness": "UPDATED 2 DAYS AGO",
+      "status": "READY",
+      "source": "Google & World Resources Institute (WRI)",
+      "license": "CC-BY 4.0"
+    },
+    {
+      "id": "worldpop",
+      "name": "WorldPop Global High Resolution Population",
+      "ee_asset_id": "WorldPop/GP/100m/pop",
+      "category": "Population",
+      "purpose": "100m gridded population density & demographic exposure estimation",
+      "resolution": "100m",
+      "acquisition_time": "2020 (Model-projected)",
+      "freshness": "MODEL ESTIMATE (2020 baseline)",
+      "status": "CACHED",
+      "source": "WorldPop / University of Southampton",
+      "license": "CC-BY 4.0",
+      "notes": "Estimated population density within modeled hazard zones — not live census."
+    },
+    {
+      "id": "ghsl-built",
+      "name": "GHSL Global Human Settlement Built-Up Surface",
+      "ee_asset_id": "JRC/GHSL/P2023A/GHS_BUILT_S",
+      "category": "Built-up Exposure",
+      "purpose": "Quantifying built footprint density and physical asset concentration",
+      "resolution": "100m",
+      "acquisition_time": "2020 Multi-temporal",
+      "freshness": "BASELINE SETTLEMENT",
+      "status": "READY",
+      "source": "European Commission JRC",
+      "license": "Open Data"
+    }
+  ]
+}
