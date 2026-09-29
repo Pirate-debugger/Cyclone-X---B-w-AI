@@ -303,6 +303,7 @@ export async function getRouteRisk(params: {
   dest_lon?: number;
   origin_name?: string;
   dest_name?: string;
+  event_id?: string;
 } = {}): Promise<any> {
   return fetchJson<any>('/api/v2/routes/risk', {
     method: 'POST',

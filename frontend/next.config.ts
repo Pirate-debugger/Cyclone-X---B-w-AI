@@ -4,6 +4,8 @@ const backendUrl = (process.env.INTERNAL_BACKEND_URL || process.env.BACKEND_URL 
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  transpilePackages: ['maplibre-gl', 'pmtiles'],
+  allowedDevOrigins: ['127.0.0.1', 'localhost'],
   async rewrites() {
     return [
       {

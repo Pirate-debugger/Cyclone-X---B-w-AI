@@ -28,7 +28,7 @@ import { DataHealthDrawer } from '../components/DataHealthDrawer';
 import { EvidenceDrawer } from '../components/EvidenceDrawer';
 
 const MapContainer = dynamic(
-  () => import('../components/MapContainer').then((mod) => mod.MapContainer),
+  () => import('../components/MapContainer').then((mod) => mod.MapContainer || (mod as any).default),
   {
     ssr: false,
     loading: () => (
@@ -356,6 +356,9 @@ export default function CycloneXApp() {
                 {/* Center Geospatial Map with MapLibre GL JS */}
                 <div className="flex-1 h-full min-h-[350px] relative">
                   <MapContainer 
+                    eventId={event?.event_id || 'DEMO-TC-2026-ALPHA'}
+                    selectedState={selectedState}
+                    selectedDistrict={selectedDistrict}
                     trackData={trackData}
                     hotspots={riskData?.top_priority_zones}
                     infrastructure={infrastructure}

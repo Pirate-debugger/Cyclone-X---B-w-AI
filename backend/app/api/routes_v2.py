@@ -183,6 +183,7 @@ class RouteRiskRequest(BaseModel):
     dest_lon: float = 85.8312
     origin_name: Optional[str] = "Bhubaneswar State EOC"
     dest_name: Optional[str] = "District Hospital, Puri"
+    event_id: Optional[str] = None
 
 @router.post("/routes/risk", response_model=Dict[str, Any])
 async def compute_route_risk(payload: RouteRiskRequest):
@@ -193,7 +194,8 @@ async def compute_route_risk(payload: RouteRiskRequest):
         dest_lat=payload.dest_lat,
         dest_lon=payload.dest_lon,
         origin_name=payload.origin_name or "Bhubaneswar State EOC",
-        dest_name=payload.dest_name or "District Hospital, Puri"
+        dest_name=payload.dest_name or "District Hospital, Puri",
+        event_id=payload.event_id
     )
     return {
         "success": True,

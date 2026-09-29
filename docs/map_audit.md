@@ -1,82 +1,81 @@
-# CYCLONE-X Geospatial Map Full Audit & Resolution Report
+# CYCLONE-X — Map Engine Complete Audit & Repair Plan
 
-**Date:** September 27, 2026  
-**Auditor:** Antigravity Autonomous Diagnostic Engine  
-**Target:** Frontend MapLibre GL Layer, CARTO Basemaps CDN, Multi-Basemap Rendering, and System Settings
-
----
-
-## 1. Executive Summary
-
-A comprehensive, end-to-end diagnostic audit was conducted on the CYCLONE-X geospatial mapping engine following reports that the map was not working as expected. 
-
-The audit identified three primary root causes:
-1. **Unconfigured API Key Parameter:** The CARTO API key was blank in `.env.local` and `.env`, causing CARTO CDN servers to reject requests with `API KEY REQUIRED carto.com/basemaps/apikey` red/white watermark tiles across the entire map viewport.
-2. **Style Load Race Condition:** Concurrent React `useEffect` hooks invoked `map.addSource` before MapLibre GL's WebGL style finished loading (`!map.isStyleLoaded()`), throwing `Uncaught Error: Style is not done loading` and crashing subsequent layer attachments.
-3. **Missing Features & Interactivity:** Priority risk zones (`hotspots`) were passed as props but never rendered as polygon layers; selecting zones or infrastructure from tables did not trigger camera fly-to animations; and the `SATELLITE` map mode lacked a real photographic satellite raster source.
-
-All issues have been resolved, verified with automated browser subagent testing, and validated against live CARTO CDN endpoints.
+**Date:** September 2026  
+**Auditors:** Geospatial GIS Architecture & MapLibre Engineering Team  
+**Status:** AUDIT COMPLETED — IMPLEMENTING COMPLETE REPAIR  
 
 ---
 
-## 2. Root Cause Analysis (RCA)
+## 1. Executive Summary & Audit Scope
 
-| Issue | Root Cause | Impact | Resolution |
-| :--- | :--- | :--- | :--- |
-| **Watermarked Basemap** | `NEXT_PUBLIC_CARTO_API_KEY` was empty in `.env.local`. CARTO CDN requires `?key=<KEY>` on all raster tile requests. | Tiles loaded with `API KEY REQUIRED` watermark overlay. | Configured runtime environment key resolution without hardcoded fallback. |
-| **Style Load Race Condition** | `addSource` and `addLayer` were invoked before `map.isStyleLoaded()` returned `true`. | Browser console threw `Uncaught Error: Style is not done loading` at `MapContainer.tsx:186`. | Implemented `map.isStyleLoaded()` guards, unified readiness listeners (`load` + `style.load`), and `try/catch` handlers. |
-| **Missing Satellite Basemap** | Selecting `SATELLITE` mode fell back to the `default` switch case without switching the underlying raster source. | Clicking `SATELLITE` did not change the basemap. | Configured dual basemap sources: **CARTO Dark Matter (Retina)** + **ESRI World Imagery (High-Res Satellite)** + CARTO Dark labels overlay. |
-| **Missing Zone Polygons** | `hotspots` prop was passed from `page.tsx` but lacked a layer definition in `MapContainer.tsx`. | Top priority zones were invisible on the map canvas. | Implemented `hotspot-zones-source`, `hotspot-zones-fill`, and `hotspot-zones-stroke` with risk severity color matching. |
-| **Lack of Selection Fly-To** | `selectedZone` and `selectedInfra` state changes were not hooked to map camera movements. | Clicking rows in the risk table did not focus the map. | Added camera `flyTo` listeners with polygon centroid calculation and smooth pan/zoom transitions. |
-| **Container Clipping on Resize** | No observer for container dimensions when panels/drawers toggled. | Map canvas could become clipped or distorted during window resizing. | Added `ResizeObserver` on `mapContainer.current` bound to `map.resize()`. |
-| **No UI Key Management** | `SettingsView.tsx` lacked basemap key inputs and diagnostics. | Operators could not inspect, test, or update basemap credentials from the GUI. | Added dedicated **CARTO BASEMAP & HIGH-DPI RETINA TILE SERVICES** configuration panel with live testing. |
+A comprehensive audit was performed across:
+- `frontend/components/MapContainer.tsx`
+- `frontend/app/page.tsx`
+- `frontend/lib/api.ts`
+- `frontend/lib/types.ts`
+- `backend/app/services/hazard_field_engine.py`
+- `backend/app/services/route_risk_engine.py`
+- `backend/app/providers/satellite_provider.py`
+- `backend/app/providers/`
+- `public/maplibre-gl-worker.mjs` and `public/maplibre-gl-shared.mjs`
+- `next.config.ts`, `Dockerfile`, `package.json`, and backend test suite.
 
----
-
-## 3. Implemented Enhancements
-
-### A. Robust Key Resolution Chain
-In [MapContainer.tsx](file:///e:/ANTIGRVITY/B-w-AI/frontend/components/MapContainer.tsx):
-```typescript
-export const CARTO_DEFAULT_KEY = '';
-
-export function getResolvedCartoKey(): string {
-  if (typeof window !== 'undefined') {
-    const stored = localStorage.getItem('cyclonex_carto_api_key');
-    if (stored && stored.trim()) return stored.trim();
-  }
-  return (
-    process.env.NEXT_PUBLIC_CARTO_API_KEY ||
-    process.env.NEXT_PUBLIC_MAP_KEY ||
-    process.env.NEXT_PUBLIC_MAP_API_KEY ||
-    CARTO_DEFAULT_KEY
-  );
-}
-```
-
-### B. Dual Basemap Sources (Retina Dark + ESRI Satellite)
-- **CARTO Dark Matter (Retina)**: `https://{a,b,c,d}.basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}@2x.png?key=...`
-- **ESRI World Imagery**: `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}`
-- **CARTO Labels**: `https://{a,b,c,d}.basemaps.cartocdn.com/rastertiles/dark_only_labels/{z}/{x}/{y}@2x.png?key=...`
-
-### C. Priority Zone Rendering & Interactive Popups
-- Rendered 4 key modeled coastal zones (`Puri South & Coastal Belt`, `Astaranga - Devi River Estuary`, `Paradip Port Industrial & Maritime Zone`, `Konark Coastal Tourism Belt`).
-- Color-coded by risk band (`#ef4444` for Severe, `#f97316` for High, `#eab308` for Moderate).
-- Full metadata popup showing zone name, administrative district, threat drivers, population at risk, and actionable civil protection directives.
-
-### D. Settings Diagnostics Panel
-In [SettingsView.tsx](file:///e:/ANTIGRVITY/B-w-AI/frontend/components/views/SettingsView.tsx):
-- Visual indicator showing `ONLINE: CARTO DARK MATTER HIGH-DPI` with live pulse dot.
-- Live "Test & Apply Key" button validating credentials directly against CARTO servers.
-- Persistence to `localStorage` for immediate cross-tab hot reload.
+The primary map stack is:
+$$\text{MapLibre GL JS 6.11.2} + \text{OpenFreeMap (Liberty)} + \text{CYCLONE-X Overlays} + \text{Google Earth Engine / SAR}$$
+Zero Google Maps API keys and Zero CARTO API keys are required for core operations.
 
 ---
 
-## 4. Verification & Validation Evidence
+## 2. Identified Deficiencies & Root Causes
 
-Automated end-to-end browser subagent testing verified the complete stack:
-1. **CARTO Retina Basemap**: 200 OK responses, 33.4KB clean PNG tiles loaded, zero watermarks.
-2. **Satellite Mode**: Instantaneous toggle to ESRI satellite imagery with active storm tracks and zone polygons.
-3. **Table to Map Interactivity**: Clicking "Puri South & Coastal Belt" triggered a smooth camera flyTo centering on `[85.82, 19.81]`.
-4. **Settings Panel**: CARTO key verified via live fetch with success notice displayed.
-5. **Console Integrity**: Zero uncaught runtime errors, zero WebGL/MapLibre warnings.
+### A. Style Values & Backend Bug
+- **Bug in `hazard_field_engine.py`:** Line 156 contained `"fill_opacity": 25`. MapLibre GL JS specifications mandate that `fill-opacity` must be a scalar float within the interval $[0.0, 1.0]$. Values $> 1.0$ cause style parser errors or render corrupt polygons.
+- **Frontend Lack of Normalization:** `MapContainer.tsx` directly bound `'fill-opacity': ['get', 'fill_opacity']` without checking or clamping values.
+
+### B. Map Style Replacement & Layer Destruction
+- **`setStyle()` Anti-Pattern:** When changing basemaps or triggering offline mode, `map.setStyle()` was called without a lifecycle rehydration manager (`MapLayerManager`). Calling `setStyle()` destroys all runtime sources and layers in MapLibre GL JS.
+- **No Layer Registry:** Layer visibility was partially hardcoded inside a `switch(activeMode)` statement instead of a unified, declarative `LayerRegistry` with `setLayerVisibility(id, visible)`.
+- **Mode Switching Isolation:** Mode switching (`TRACK`, `ENSEMBLE`, `WIND`, `RAINFALL`, `FLOOD`, `IMPACT`, `INFRASTRUCTURE`, `POPULATION`, `SATELLITE`, `FORECAST CHANGE`, `ROUTE RISK`) must NEVER call `map.setStyle()`; they are purely overlay presets.
+
+### C. Missing & Incomplete Modes
+- **POPULATION Mode:** The `POPULATION` button was present in UI, but no underlying data source, raster layer, or polygon grid was registered.
+- **SATELLITE Mode:** No actual satellite imagery layer was attached. Needs dedicated `satellite-raster-source` and `satellite-raster-layer` backed by Google Earth Engine / Sentinel-1 SAR endpoints with clean unconfigured fallbacks.
+- **FORECAST CHANGE Mode:** Did not exist in the map layer registry. Needs delta tracks and landfall shift lines comparing previous vs. current forecast runs.
+
+### D. Route Risk Geometry Mismatch & Hardcoded Fallbacks
+- **Property Mismatch:** Backend returns `route_geojson` (GeoJSON Feature with `geometry.coordinates` in `[lon, lat]`), whereas frontend checked `route_geometry`.
+- **Hardcoded Coordinates:** Frontend lines 814–818 had hardcoded synthetic coordinates for Bhubaneswar to Puri, violating the rule that LIVE mode must never display synthetic routes.
+
+### E. Hardcoded Geographic Defaults & Missing Context
+- **Puri Hardcoding:** Map center was statically fixed to `[86.2, 19.8]` with no dynamic bounds computation.
+- **Context Isolation:** `selectedState` and `selectedDistrict` in `page.tsx` were not passed to `MapContainer`, preventing camera updates when selecting Gujarat, Tamil Nadu, Andhra Pradesh, or West Bengal.
+- **Camera Bounds:** Centroids were averaged using arithmetic mean instead of `maplibregl.LngLatBounds`.
+
+### F. Popup Security & Event Listener Memory Leaks
+- **XSS Vulnerability:** Popups used unescaped `setHTML()` with raw properties (`props.name`, `props.action`, `props.admin_area`).
+- **Duplicate Event Handlers:** Click handlers were re-bound inside reactive `useEffect` hooks without cleanup (`map.off()`), multiplying listeners on every state update.
+
+### G. Infrastructure Risk Fallbacks
+- Lines 653–659 in `MapContainer.tsx` silently defaulted to `60%`, `80%`, `70%`, `45%`, `92.5%` when asset impact probabilities were missing, instead of showing `N/A` or `DATA UNAVAILABLE`.
+
+### H. Local Offline Basemap
+- The offline style was an empty `#080d1a` dark rectangle with no geographic features. It must include bundled offline GeoJSON geometries for India's coastline, states, and major coastal ports/districts.
+
+---
+
+## 3. Complete Architectural Repair Plan
+
+1. **Backend Patch:** Fix `fill_opacity: 25` $\to$ `0.25` in `hazard_field_engine.py` and ensure `route_geojson` is always canonical GeoJSON.
+2. **`MapLayerManager`:** Centralized class managing source registration, layer registration, data updates, clean removals, and rehydration across `load`, `style.load`, and `styledata` events.
+3. **GeoJSON Validator & Safe Opacity Normalizer:** Clamp opacity to $[0.0, 1.0]$, validate coordinates within $[-180, 180]$ and $[-90, 90]$, discard malformed features without dropping valid ones.
+4. **Automatic Camera (`LngLatBounds`):** Implement `fitToEvent()`, `fitToTrack()`, `fitToHotspot()`, `fitToInfrastructure()`, `fitToDistrict()`, `fitToRoute()`, and state-level bounds for India coastal states.
+5. **Mode Presets & Visibility:** 11 distinct modes configuring layer visibility via `setLayoutProperty` with existence checks; zero calls to `setStyle()`.
+6. **Real Overlays:**
+   - Population density grid (`population-source`, `population-fill`).
+   - Satellite raster (`satellite-raster-source`, `satellite-raster-layer`) connected to Earth Engine/Sentinel-1 tiles.
+   - Forecast change comparison (`forecast-change-source`, `forecast-change-line`).
+   - Clustered infrastructure (`cluster: true`, `clusterRadius: 40`).
+7. **Secure Popups & Interaction Registry:** `escapeHtml()` sanitization, single interaction attachment lifecycle with `map.off()` cleanup.
+8. **India Offline Basemap:** Bundled high-accuracy India coastline and coastal state boundaries embedded directly into `LOCAL_OFFLINE_STYLE`.
+9. **Time Slider:** `NOW`, `+6h`, `+12h`, `+24h`, `+36h`, `+48h`, `+72h` lead-time filter.
+10. **Verification:** Unit tests and end-to-end browser testing.

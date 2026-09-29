@@ -153,7 +153,7 @@ class HazardFieldEngine:
                     "intensity": "Severe",
                     "methodology": "PARAMETRIC PROXY",
                     "color": "#f97316",
-                    "fill_opacity": 25
+                    "fill_opacity": 0.25
                 }
             },
             # Rainfall Exceedance Zone (>200mm / 24h)

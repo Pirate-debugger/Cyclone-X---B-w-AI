@@ -327,6 +327,7 @@ class RouteRiskAssessment(BaseModel):
     model_version: Optional[str] = "Valhalla-MultiHazard-v2"
     data_quality: Optional[str] = "HIGH"
     route_geojson: Dict[str, Any]
+    alternative_geojson: Optional[Dict[str, Any]] = None
     disclaimer: str = "Route intersects modeled high-risk area. Not an official road closure notice unless verified by civil authorities."
     classification: DataClassification = DataClassification.MODEL_OUTPUT
 

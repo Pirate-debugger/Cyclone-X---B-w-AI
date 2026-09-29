@@ -388,6 +388,22 @@ class RouteRiskEngine:
             }
         }
 
+        geojson_alt = {
+            "type": "Feature",
+            "geometry": {
+                "type": "LineString",
+                "coordinates": alt_coords
+            },
+            "properties": {
+                "origin": origin_name,
+                "destination": dest_name,
+                "distance_km": alt_dist,
+                "name": "Alternative Evacuation Corridor",
+                "exposure": alt_exposure,
+                "reduction_pct": reduction_pct
+            }
+        }
+
         classification = DataClassification.MODEL_OUTPUT if resolved_provider != "demo" else DataClassification.DEMO
 
         return RouteRiskAssessment(
@@ -409,6 +425,7 @@ class RouteRiskEngine:
             exposure_reduction_pct=reduction_pct,
             route_provider=resolved_provider,
             route_geojson=geojson_route,
+            alternative_geojson=geojson_alt,
             disclaimer="Route intersects modeled high-risk area. Not an official road closure notice unless verified by civil authorities.",
             classification=classification
         )
