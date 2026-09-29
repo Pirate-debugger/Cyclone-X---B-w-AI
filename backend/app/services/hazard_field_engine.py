@@ -1,5 +1,6 @@
 import math
 from typing import Dict, Any, List
+from app.core.config import settings
 from app.models.schemas_v2 import (
     HazardFieldsOverview,
     RainfallExceedanceProbability,
@@ -15,7 +16,7 @@ class HazardFieldEngine:
     """
 
     @staticmethod
-    def get_hazard_overview(event_id: str = "cyclone-alpha", lead_hours: int = 48) -> HazardFieldsOverview:
+    def get_hazard_overview(event_id: str = "DEMO-TC-2026-ALPHA", lead_hours: int = 48) -> HazardFieldsOverview:
         """
         Generates 2D gridded hazard summaries, accumulated precipitation exceedances,
         and coastal inundation water level decomposition.
@@ -60,15 +61,22 @@ class HazardFieldEngine:
             )
         ]
 
-        # Coastal water level decomposition (Section 19: Tide + Surge + Wave Setup + Runoff)
+        # Coastal water level decomposition (Section 19 & 21: Tide + Surge + Wave Setup + Runoff)
+        # Never mark official_hydrodynamic_available=True unless real official hydrodynamic data exists
+        is_official_incois = bool(settings.INCOIS_ENABLED and settings.APP_MODE.lower() == "live")
+
         inundation = InundationDecomposition(
             astronomical_tide_m=1.85,
             storm_surge_proxy_m=3.10,
             wave_setup_m=0.65,
             total_water_level_m=5.60,
-            official_hydrodynamic_available=True,
+            official_hydrodynamic_available=is_official_incois,
             satellite_observed_water_change_detected=True,
-            disclaimer="Astronomical Spring Tide (1.85m) + Wind-Driven Surge (3.10m) + Breaking Wave Setup (0.65m) = 5.60m Peak Coastal Water Level"
+            disclaimer=(
+                "OFFICIAL HYDRODYNAMIC PRODUCT: INCOIS Storm Surge & Tide Bulletin"
+                if is_official_incois
+                else "PARAMETRIC PROXY: Tide (1.85m) + Parametric Surge Proxy (3.10m) + Wave Setup (0.65m). Not an official hydrodynamic forecast."
+            )
         )
 
         # Gridded wind field distribution summary
@@ -80,14 +88,14 @@ class HazardFieldEngine:
             "r50_extent_km": 75.0,
             "r64_extent_km": 35.0,
             "asymmetry_quadrant": "Northeast Quadrant (Enhanced by Monsoon Translation)",
-            "methodology_badge": "GRID FORECAST (WeatherNext 3 Gridded Assimilation)",
+            "methodology_badge": "PARAMETRIC PROXY (Holland B-Parameter Vortex Profile)" if settings.APP_MODE.lower() != "live" else "GRID FORECAST (WeatherNext 3 Gridded Assimilation)",
             "active_cells_count": 1248
         }
 
         return HazardFieldsOverview(
             event_id=event_id,
             forecast_time=f"T+{lead_hours}h",
-            wind_field_type="GRID_FORECAST",
+            wind_field_type="PARAMETRIC_PROXY" if settings.APP_MODE.lower() != "live" else "GRID_FORECAST",
             wind_grid_summary=wind_grid_summary,
             rainfall_exceedances=rainfall_exceedances,
             inundation_components=inundation,
@@ -95,20 +103,21 @@ class HazardFieldEngine:
         )
 
     @classmethod
-    def get_rainfall_exceedances(cls, event_id: str = "cyclone-alpha") -> List[Dict[str, Any]]:
+    def get_rainfall_exceedances(cls, event_id: str = "DEMO-TC-2026-ALPHA") -> List[Dict[str, Any]]:
         overview = cls.get_hazard_overview(event_id)
         return [r.model_dump() for r in overview.rainfall_exceedances]
 
     @classmethod
-    def get_inundation_components(cls, event_id: str = "cyclone-alpha") -> InundationDecomposition:
+    def get_inundation_components(cls, event_id: str = "DEMO-TC-2026-ALPHA") -> InundationDecomposition:
         overview = cls.get_hazard_overview(event_id)
         return overview.inundation_components
 
     @staticmethod
-    def get_spatial_hazard_geojson(event_id: str = "cyclone-alpha") -> Dict[str, Any]:
+    def get_spatial_hazard_geojson(event_id: str = "DEMO-TC-2026-ALPHA") -> Dict[str, Any]:
         """
         Generates GeoJSON spatial polygon hazard contours for wind swath,
         extreme rainfall zone (>200mm), and surge inundation corridor.
+        Differentiates PARAMETRIC PROXY, SCENARIO INUNDATION PROXY, and SATELLITE OBSERVED CHANGE.
         """
         features = [
             # 64kt (118 km/h) Hurricane Force Wind Core
@@ -124,6 +133,7 @@ class HazardFieldEngine:
                     "hazard_type": "WIND_64KT",
                     "label": "Hurricane Wind Core (>118 km/h)",
                     "intensity": "Extremely Severe",
+                    "methodology": "PARAMETRIC PROXY",
                     "color": "#ef4444",
                     "fill_opacity": 0.4
                 }
@@ -141,11 +151,12 @@ class HazardFieldEngine:
                     "hazard_type": "WIND_50KT",
                     "label": "Storm Wind Swath (>92 km/h)",
                     "intensity": "Severe",
+                    "methodology": "PARAMETRIC PROXY",
                     "color": "#f97316",
-                    "fill_opacity": 0.25
+                    "fill_opacity": 25
                 }
             },
-            # Gridded Rainfall Exceedance Zone (>200mm / 24h)
+            # Rainfall Exceedance Zone (>200mm / 24h)
             {
                 "type": "Feature",
                 "geometry": {
@@ -158,6 +169,7 @@ class HazardFieldEngine:
                     "hazard_type": "RAIN_EXCEED_200MM",
                     "label": "P(24h Rain > 200mm) = 64-85%",
                     "intensity": "Extreme Precipitation",
+                    "methodology": "PARAMETRIC PROXY",
                     "color": "#3b82f6",
                     "fill_opacity": 0.35
                 }
@@ -175,6 +187,7 @@ class HazardFieldEngine:
                     "hazard_type": "SURGE_INUNDATION",
                     "label": "Peak Water Level 5.6m (Tide + Surge + Wave Setup)",
                     "intensity": "Severe Inundation",
+                    "methodology": "SCENARIO INUNDATION PROXY",
                     "color": "#06b6d4",
                     "fill_opacity": 0.45
                 }

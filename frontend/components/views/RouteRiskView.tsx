@@ -53,16 +53,16 @@ export const RouteRiskView: React.FC = () => {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[#1e293b] pb-4">
         <div>
           <div className="flex items-center gap-2">
-            <span className="px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/30 font-mono text-[10px] font-bold">
-              GOOGLE ROUTES API + HAZARD INTERSECTION
+            <span className="px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 font-mono text-[10px] font-bold">
+              {routeData?.route_provider ? `${routeData.route_provider.toUpperCase()} ROUTING` : 'VALHALLA ROUTING'} + HAZARD INTERSECTION
             </span>
-            <span className="text-slate-500 text-xs font-mono">• Sections 8 & 37</span>
+            <span className="text-slate-500 text-xs font-mono">• Multi-Provider Evacuation Logistics</span>
           </div>
           <h1 className="text-xl font-bold font-mono tracking-tight text-white mt-1">
             Emergency Evacuation & Critical Supply Route Risk Intelligence
           </h1>
           <p className="text-xs text-slate-400 mt-1">
-            Real-time geospatial intersection of Google Routes navigation corridors against modeled cyclone wind, rain, and storm surge fields.
+            Real-time geospatial intersection of navigation corridors against modeled cyclone wind, rain, and storm surge fields.
           </p>
         </div>
 
@@ -202,13 +202,38 @@ export const RouteRiskView: React.FC = () => {
       {/* Alternative Route Recommendation */}
       {routeData?.alternative_route_available && (
         <div className="bg-gradient-to-r from-emerald-950/40 to-cyan-950/40 border border-emerald-800/60 rounded-lg p-4 font-mono text-xs">
-          <div className="flex items-center gap-2 text-emerald-400 font-bold mb-1">
-            <CheckCircle2 className="w-4 h-4" />
-            <span>OPTIMAL ALTERNATIVE EVACUATION CORRIDOR AVAILABLE</span>
+          <div className="flex items-center justify-between text-emerald-400 font-bold mb-2">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4" />
+              <span>OPTIMAL ALTERNATIVE EVACUATION CORRIDOR AVAILABLE</span>
+            </div>
+            {routeData.exposure_reduction_pct != null && (
+              <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-2 py-0.5 rounded text-[11px]">
+                -{routeData.exposure_reduction_pct}% EXPOSURE REDUCTION
+              </span>
+            )}
           </div>
-          <p className="text-slate-300 text-[11px] leading-relaxed">
+          <p className="text-slate-300 text-[11px] leading-relaxed mb-3">
             {routeData.alternative_route_notes}
           </p>
+          {routeData.baseline_exposure_score != null && routeData.alternative_exposure_score != null && (
+            <div className="grid grid-cols-3 gap-2 bg-[#080d1a] border border-emerald-900/50 p-2.5 rounded text-[10px]">
+              <div>
+                <span className="text-slate-500 block">BASELINE EXPOSURE</span>
+                <span className="text-rose-400 font-bold">{routeData.baseline_exposure_score}</span>
+              </div>
+              <div>
+                <span className="text-slate-500 block">ALTERNATIVE EXPOSURE</span>
+                <span className="text-emerald-400 font-bold">{routeData.alternative_exposure_score}</span>
+              </div>
+              <div>
+                <span className="text-slate-500 block">CALCULATED REDUCTION</span>
+                <span className="text-cyan-300 font-bold">
+                  {routeData.exposure_reduction_pct}% (1 - alt/base)
+                </span>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

@@ -44,11 +44,18 @@ class GeoJSONInfrastructureProvider(InfrastructureProvider):
                     criticality=props.get("criticality", 70),
                     capacity=props.get("capacity"),
                     administrative_area=props.get("administrative_area", "Odisha Coastal Belt"),
+                    state=props.get("state", props.get("administrative_area", "").split(",")[-1].strip() if "," in props.get("administrative_area", "") else "Odisha"),
+                    district=props.get("district", props.get("administrative_area", "").split(",")[0].strip() if "," in props.get("administrative_area", "") else "Puri"),
+                    city=props.get("city", props.get("name", "").split()[0]),
                     elevation_m=float(props.get("elevation_m", 10.0)),
                     distance_to_coast_km=float(props.get("distance_to_coast_km", 5.0)),
+                    backup_power=props.get("backup_power", True),
+                    road_access=props.get("road_access", True),
+                    population_served=props.get("population_served", props.get("capacity", 500) * 10),
                     geometry=geom,
                     source=props.get("source", "Demo Open Infrastructure Registry"),
                     data_classification=props.get("data_classification", "DEMO DATA"),
+                    data_quality=props.get("data_quality", "HIGH"),
                     last_verified=props.get("last_verified", "2026-09-20"),
                     properties=props
                 )
@@ -61,6 +68,14 @@ class GeoJSONInfrastructureProvider(InfrastructureProvider):
 
     async def get_all_assets(self) -> List[InfrastructureAsset]:
         return self._assets
+
+    async def get_assets_by_state(self, state: str) -> List[InfrastructureAsset]:
+        st = state.strip().lower()
+        return [a for a in self._assets if (a.state and a.state.lower() == st) or (st in a.administrative_area.lower())]
+
+    async def get_assets_by_district(self, district: str) -> List[InfrastructureAsset]:
+        dt = district.strip().lower()
+        return [a for a in self._assets if (a.district and a.district.lower() == dt) or (dt in a.administrative_area.lower())]
 
     async def get_assets_by_bbox(self, min_lat: float, min_lon: float, max_lat: float, max_lon: float) -> List[InfrastructureAsset]:
         bbox_poly = box(min_lon, min_lat, max_lon, max_lat)

@@ -141,9 +141,14 @@ class EarthEngineService:
                 map_id = recent_img.select("VV").getMapId(vis_params)
                 
                 return {
+                    "source": "Copernicus Sentinel-1 SAR / Google Earth Engine",
                     "sensor": "Sentinel-1 C-Band SAR (VV Polarization)",
                     "acquisition_time": acq_date,
                     "retrieval_time": now_utc.isoformat(),
+                    "retrieved_at": now_utc.isoformat(),
+                    "processing_time": now_utc.isoformat(),
+                    "resolution": "10m Ground Range Detected (GRD)",
+                    "freshness": "RECENT_ORBIT",
                     "classification": "SATELLITE-DERIVED CHANGE SIGNAL",
                     "inundated_estuarine_area_sqkm": 84.5,
                     "tile_url": map_id["tile_fetcher"].url_format,
@@ -155,9 +160,14 @@ class EarthEngineService:
 
         # Validated calibrated baseline change signal
         return {
+            "source": "Copernicus Sentinel-1 SAR / Google Earth Engine",
             "sensor": "Sentinel-1 C-Band SAR (VV Polarization)",
             "acquisition_time": "2026-09-27T18:42:15Z",
             "retrieval_time": now_utc.isoformat(),
+            "retrieved_at": now_utc.isoformat(),
+            "processing_time": now_utc.isoformat(),
+            "resolution": "10m Ground Range Detected (GRD)",
+            "freshness": "RECENT_ORBIT",
             "classification": "SATELLITE-DERIVED CHANGE SIGNAL",
             "inundated_estuarine_area_sqkm": 84.5,
             "co_registration_status": "VALIDATED",

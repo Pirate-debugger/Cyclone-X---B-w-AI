@@ -16,6 +16,7 @@ from app.api.routes_ai import router as ai_router
 from app.api.routes_alerts import router as alerts_router
 from app.api.routes_reports import router as reports_router
 from app.api.routes_v2 import router as v2_router
+from app.api.routes_geography import router as geography_router
 
 app = FastAPI(
     title="CYCLONE-X API",
@@ -107,6 +108,7 @@ app.include_router(infra_router, prefix="/api")
 app.include_router(ai_router, prefix="/api")
 app.include_router(alerts_router, prefix="/api")
 app.include_router(reports_router, prefix="/api")
+app.include_router(geography_router, prefix="/api")
 app.include_router(v2_router, prefix="/api")
 app.include_router(v2_router, prefix="/api/v2")
 

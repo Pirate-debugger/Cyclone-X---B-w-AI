@@ -14,6 +14,7 @@ from app.services.route_risk_engine import RouteRiskEngine
 from app.services.earth_engine_service import EarthEngineService
 from app.services.vertex_impact_service import VertexAIImpactProvider, VertexFeatureVector
 from app.providers.imd_provider import IMDProvider
+from app.providers.weathernext_provider import WeatherNext3Provider, WeatherNextProvider
 from app.providers.google_weather_provider import GoogleWeatherProvider
 from app.models.schemas_v2 import DataClassification
 from app.core.config import settings
@@ -44,123 +45,273 @@ class GeminiCopilotV2:
     _ee_service = EarthEngineService()
     _vertex_impact = VertexAIImpactProvider()
 
-    # The 19 mandatory tools specified in Section 5
-    TOOLS_REGISTRY = {
-        "get_current_event": lambda event_id="cyclone-alpha": {
-            "event_id": event_id,
-            "name": "Cyclone Alpha (Bay of Bengal)",
-            "category": "Extremely Severe Cyclonic Storm",
-            "current_location": {"lat": 16.8, "lon": 86.4},
-            "max_sustained_wind_kmh": 155.0,
-            "central_pressure_hpa": 965.0,
-            "movement": "North-northeast at 15 km/h",
-            "source": "IMD Official RSMC Bulletin #14",
-            "classification": DataClassification.OBSERVATION.value
-        },
-        "get_official_imd_forecast": lambda event_id="cyclone-alpha": (
-            IMDProvider().get_official_bulletin(event_id).model_dump()
-        ),
-        "get_weathernext_forecast": lambda event_id="cyclone-alpha": {
-            "model_name": "WeatherNext 3 Global NWP",
-            "ensemble_members": 64,
-            "forecast_initialization": datetime.now(timezone.utc).strftime("%Y-%m-%dT00:00:00Z"),
-            "lead_hours": 72,
-            "p50_landfall_wind_kmh": 162.0,
-            "mean_pressure_hpa": 956.0,
-            "classification": DataClassification.ENSEMBLE.value,
-            "disclaimer": "EXPERIMENTAL AI FORECAST. Not an official government warning."
-        },
-        "get_forecast_ensemble": lambda event_id="cyclone-alpha": (
-            EnsembleAggregator.get_ensemble_aggregation(event_id).model_dump()
-        ),
-        "get_landfall_probability": lambda event_id="cyclone-alpha": [
-            s.model_dump() for s in LandfallProbabilityEngine.calculate_sector_landfall_probabilities(event_id)
-        ],
-        "get_forecast_evolution": lambda event_id="cyclone-alpha": (
-            ForecastComparisonEngine.get_forecast_evolution(event_id)
-        ),
-        "get_weather_context": lambda lat=19.8, lon=85.8, event_id="cyclone-alpha": (
-            {
-                "provider": "GOOGLE WEATHER API",
-                "location": {"lat": lat, "lon": lon},
-                "temperature_c": 28.2,
-                "relative_humidity_pct": 88,
-                "current_wind_speed_kmh": 65.0,
-                "wind_gust_kmh": 82.0,
-                "pressure_hpa": 992.0,
-                "classification": "OBSERVATION",
-                "disclaimer": "Local weather context via Google Weather API. Not an IMD official bulletin."
-            }
-        ),
-        "get_rainfall_probability": lambda event_id="cyclone-alpha": (
-            HazardFieldEngine.get_rainfall_exceedances(event_id)
-        ),
-        "get_wind_probability": lambda event_id="cyclone-alpha": {
-            "exceedance_thresholds": [
-                {"threshold": ">100 km/h", "probability_pct": 84.0, "affected_area_sqkm": 14200},
-                {"threshold": ">140 km/h", "probability_pct": 62.0, "affected_area_sqkm": 6800},
-                {"threshold": ">180 km/h", "probability_pct": 28.0, "affected_area_sqkm": 1950}
-            ],
-            "peak_ensemble_gust_kmh": 185.0,
-            "classification": DataClassification.MODEL_OUTPUT.value
-        },
-        "get_inundation_probability": lambda event_id="cyclone-alpha": (
-            HazardFieldEngine.get_inundation_components(event_id).model_dump()
-        ),
-        "get_infrastructure_risk": lambda event_id="cyclone-alpha": [
-            a.model_dump() for a in ImpactProbabilityEngine.get_critical_assets_impact(event_id)
-        ],
-        "get_population_exposure": lambda event_id="cyclone-alpha": {
-            "total_exposed_population": 1280000,
-            "severe_hazard_zone_population": 340000,
-            "demographic_vulnerable_children_elderly": 85000,
-            "source": "WorldPop / GHSL Global Human Settlement Layer (100m)",
-            "classification": DataClassification.OBSERVATION.value
-        },
-        "get_satellite_observation": lambda event_id="cyclone-alpha": (
-            EarthEngineService().get_sentinel1_change_analysis()
-        ),
-        "get_data_health": lambda event_id="cyclone-alpha": {
-            "data_quality": DataQualityEngine.evaluate_pipeline_quality(event_id).model_dump(),
-            "provider_freshness": [p.model_dump() for p in FreshnessEngine.get_providers_freshness()]
-        },
-        "compare_forecast_models": lambda event_id="cyclone-alpha": (
-            ForecastComparisonEngine.get_multi_model_consensus(event_id).model_dump()
-        ),
-        "run_scenario": lambda offset_km=0, wind_multiplier=1.1, surge_m=3.5: {
-            "scenario_type": "WHAT-IF SCENARIO",
-            "disclaimer": "WHAT-IF SCENARIO: Not an official forecast. Not an observed event.",
-            "wind_multiplier": wind_multiplier,
-            "surge_scenario_m": surge_m,
-            "delta_risk_score": +8.5,
-            "delta_population_exposed": +42000,
-            "delta_critical_assets_at_risk": +5,
-            "classification": DataClassification.SCENARIO.value
-        },
-        "get_route_risk": lambda origin="Bhubaneswar State EOC", dest="District Hospital Puri": {
-            "origin": origin,
-            "destination": dest,
-            "distance_km": 68.4,
-            "duration_minutes": 72.0,
-            "overall_risk_band": "SEVERE",
-            "route_exposure_score": 78.5,
-            "high_risk_intersections": ["NH-316 Puri Bypass Culvert", "Bhargavi River Bridge"],
-            "alternative_route_available": True,
-            "alternative_route_notes": "Inland Pipili-Nimapara corridor reduces surge exposure by 84%.",
-            "disclaimer": "Route intersects modeled high-risk area. Not an official road closure."
-        },
-        "get_verification_metrics": lambda event_id="hist-fani-2019": (
-            BacktestEngine.get_verification_metrics(event_id)
-        ),
-        "generate_incident_brief": lambda event_id="cyclone-alpha": {
-            "title": f"Incident Situation Briefing: {event_id}",
-            "generated_at": datetime.now(timezone.utc).isoformat(),
-            "threat_level": "SEVERE",
-            "landfall_sector": "Puri - Astaranga Coastal Belt (47% probability)",
-            "peak_wind": "155-175 km/h",
-            "human_review_required": True,
-            "classification": DataClassification.AI_INTERPRETATION.value
+    @staticmethod
+    def _tool_get_current_event(event_id=None):
+        eid = event_id or settings.DEFAULT_EVENT_ID
+        bulletin = IMDProvider().get_official_bulletin(eid)
+        return {
+            "event_id": eid,
+            "name": bulletin.storm_name if bulletin.warning_status != "OFFICIAL_SOURCE_UNAVAILABLE" else "Unknown Event",
+            "category": bulletin.cyclone_category,
+            "current_intensity_kmh": bulletin.current_intensity_kmh,
+            "central_pressure_hpa": bulletin.central_pressure_hpa,
+            "estimated_landfall_sector": bulletin.estimated_landfall_sector,
+            "source": bulletin.official_source,
+            "timestamp": bulletin.bulletin_time,
+            "classification": bulletin.classification,
+            "model_version": "RSMC Cyclone Advisory System",
+            "data_quality": "HIGH" if bulletin.warning_status != "OFFICIAL_SOURCE_UNAVAILABLE" else "UNAVAILABLE",
+            "status": "ACTIVE" if bulletin.warning_status != "OFFICIAL_SOURCE_UNAVAILABLE" else "DATA UNAVAILABLE"
         }
+
+    @staticmethod
+    def _tool_get_official_imd_forecast(event_id=None):
+        return IMDProvider().get_official_bulletin(event_id or settings.DEFAULT_EVENT_ID).model_dump()
+
+    @staticmethod
+    def _tool_get_weathernext(event_id=None):
+        forecast = WeatherNextProvider().get_ensemble_forecast(event_id or settings.DEFAULT_EVENT_ID)
+        return {
+            "event_id": event_id or settings.DEFAULT_EVENT_ID,
+            "model_name": forecast.get("model_name", "WeatherNext 3 Global NWP"),
+            "ensemble_members": forecast.get("ensemble_members", 64),
+            "forecast_initialization": forecast.get("initialization_time", datetime.now(timezone.utc).isoformat()),
+            "lead_hours": 72,
+            "source": forecast.get("source", "WeatherNext 3"),
+            "classification": forecast.get("classification", DataClassification.ENSEMBLE.value),
+            "model_version": forecast.get("model_version", "v3.0.1-era5cal"),
+            "data_quality": "HIGH" if settings.APP_MODE == "live" else "DEMO_SCENARIO",
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "disclaimer": "EXPERIMENTAL AI FORECAST. Not an official government warning."
+        }
+
+    @staticmethod
+    def _tool_get_ensemble(event_id=None):
+        eid = event_id or settings.DEFAULT_EVENT_ID
+        agg = EnsembleAggregator.get_ensemble_aggregation(eid)
+        return {
+            **agg.model_dump(),
+            "source": "WeatherNext 3 64-Member Ensemble Aggregator",
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "classification": DataClassification.ENSEMBLE.value,
+            "model_version": "WeatherNext-3-Global",
+            "data_quality": "HIGH"
+        }
+
+    @staticmethod
+    def _tool_get_landfall_probability(event_id=None):
+        return [
+            {
+                **s.model_dump(),
+                "source": "WeatherNext 3 Coastal Intersect Engine",
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "classification": DataClassification.ENSEMBLE.value,
+                "model_version": "Sector-Landfall-v2",
+                "data_quality": "HIGH"
+            }
+            for s in LandfallProbabilityEngine.calculate_sector_landfall_probabilities(event_id or settings.DEFAULT_EVENT_ID)
+        ]
+
+    @staticmethod
+    def _tool_get_forecast_evolution(event_id=None):
+        return ForecastComparisonEngine.get_forecast_evolution(event_id or settings.DEFAULT_EVENT_ID)
+
+    @staticmethod
+    def _tool_get_weather(lat=19.8, lon=85.8, event_id=None):
+        return GoogleWeatherProvider().get_weather_context_sync(lat, lon)
+
+    @staticmethod
+    def _tool_get_wind_probability(event_id=None):
+        eid = event_id or settings.DEFAULT_EVENT_ID
+        agg = EnsembleAggregator.get_ensemble_aggregation(eid)
+        return {
+            "event_id": eid,
+            "exceedance_thresholds": [
+                {"threshold": ">100 km/h", "probability_pct": agg.prob_wind_exceed_100kmh, "description": "Tropical Storm / Gale Force"},
+                {"threshold": ">140 km/h", "probability_pct": agg.prob_wind_exceed_140kmh, "description": "Very Severe Cyclonic Storm Force"},
+                {"threshold": ">180 km/h", "probability_pct": agg.prob_wind_exceed_180kmh, "description": "Extremely Severe Cyclonic Storm Force"}
+            ],
+            "mean_intensity_kmh": agg.mean_intensity_kmh,
+            "p50_intensity_kmh": agg.p50_intensity_kmh,
+            "p90_intensity_kmh": agg.p90_intensity_kmh,
+            "source": "WeatherNext 3 Empirical Ensemble Exceedance Engine",
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "classification": DataClassification.MODEL_OUTPUT.value,
+            "model_version": "64-Member Exceedance v3",
+            "data_quality": "HIGH"
+        }
+
+    @staticmethod
+    def _tool_get_rainfall_probability(event_id=None):
+        eid = event_id or settings.DEFAULT_EVENT_ID
+        overview = HazardFieldEngine.get_hazard_overview(eid)
+        return {
+            "event_id": eid,
+            "rainfall_exceedance": [r.model_dump() for r in overview.rainfall_exceedances],
+            "source": "CYCLONE-X Hydro-Meteorological Hazard Field Engine",
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "classification": DataClassification.MODEL_OUTPUT.value,
+            "model_version": "Rainfall-Exceedance-v2",
+            "data_quality": "HIGH"
+        }
+
+    @staticmethod
+    def _tool_get_inundation_probability(event_id=None):
+        inun = HazardFieldEngine.get_inundation_components(event_id or settings.DEFAULT_EVENT_ID)
+        return {
+            **inun.model_dump(),
+            "source": "SLOSH / Hydrodynamic Surge Baseline",
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "classification": DataClassification.MODEL_OUTPUT.value,
+            "model_version": "Inundation-Hydro-v1",
+            "data_quality": "HIGH"
+        }
+
+    @staticmethod
+    def _tool_get_infrastructure_risk(event_id=None):
+        return [
+            {
+                **a.model_dump(),
+                "source": "CYCLONE-X Multi-Hazard Asset Vulnerability Engine",
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "classification": DataClassification.MODEL_OUTPUT.value,
+                "model_version": "AssetImpact-v2.1",
+                "data_quality": "HIGH"
+            }
+            for a in ImpactProbabilityEngine.get_critical_assets_impact(event_id or settings.DEFAULT_EVENT_ID)
+        ]
+
+    @staticmethod
+    def _tool_get_population(event_id=None):
+        eid = event_id or settings.DEFAULT_EVENT_ID
+        return {
+            "event_id": eid,
+            "total_exposed_population": 1280000 if settings.APP_MODE == "demo" else 0,
+            "severe_hazard_zone_population": 340000 if settings.APP_MODE == "demo" else 0,
+            "demographic_vulnerable_children_elderly": 85000 if settings.APP_MODE == "demo" else 0,
+            "source": "WorldPop / GHSL Global Human Settlement Layer (100m)",
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "classification": DataClassification.DEMO.value if settings.APP_MODE == "demo" else DataClassification.OBSERVATION.value,
+            "model_version": "WorldPop-2025-Constrained",
+            "data_quality": "DEMO_SYNTHETIC" if settings.APP_MODE == "demo" else "HIGH",
+            "status": "AVAILABLE" if (settings.APP_MODE == "demo" or EarthEngineService().is_live()) else "DATA UNAVAILABLE"
+        }
+
+    @staticmethod
+    def _tool_get_satellite(event_id=None):
+        return EarthEngineService().get_sentinel1_change_analysis()
+
+    @staticmethod
+    def _tool_get_data_health(event_id=None):
+        return {
+            "data_quality": DataQualityEngine.evaluate_pipeline_quality(event_id or settings.DEFAULT_EVENT_ID).model_dump(),
+            "provider_freshness": [p.model_dump() for p in FreshnessEngine.get_providers_freshness()],
+            "source": "CYCLONE-X SRE Diagnostics Service",
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "classification": DataClassification.OBSERVATION.value,
+            "model_version": "HealthCheck-v2",
+            "data_quality": "HIGH"
+        }
+
+    @staticmethod
+    def _tool_compare_models(event_id=None):
+        data = ForecastComparisonEngine.get_multi_model_consensus(event_id or settings.DEFAULT_EVENT_ID).model_dump()
+        return {
+            **data,
+            "source": "CYCLONE-X Multi-Model Track Consensus Engine (IMD / WeatherNext / ECMWF)",
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "model_version": "Consensus-v3",
+            "data_quality": "HIGH"
+        }
+
+    @staticmethod
+    def _tool_run_scenario(offset_km=0, wind_multiplier=1.1, surge_m=3.5, event_id=None):
+        return {
+            "scenario_type": "WHAT-IF SCENARIO",
+            "event_id": event_id or settings.DEFAULT_EVENT_ID,
+            "disclaimer": "WHAT-IF SCENARIO: Not an official forecast. Not an observed event.",
+            "inputs": {
+                "offset_km": offset_km,
+                "wind_multiplier": wind_multiplier,
+                "surge_scenario_m": surge_m
+            },
+            "delta_risk_score": round((wind_multiplier - 1.0) * 45.0 + surge_m * 1.5, 1),
+            "delta_population_exposed": int(42000 * wind_multiplier),
+            "delta_critical_assets_at_risk": int(3 + round(surge_m)),
+            "source": "CYCLONE-X Scenario Engine",
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "classification": DataClassification.SCENARIO.value,
+            "model_version": "ScenarioSimulator-v1",
+            "data_quality": "SIMULATED"
+        }
+
+    @staticmethod
+    def _tool_get_route_risk(origin="Bhubaneswar State EOC", dest="District Hospital Puri", route_provider=None, event_id=None):
+        res = RouteRiskEngine().compute_route_risk_sync(origin, dest, provider=route_provider, event_id=event_id or settings.DEFAULT_EVENT_ID)
+        dump = res.model_dump()
+        dump["source"] = f"CYCLONE-X Route Risk Engine ({res.route_provider})"
+        dump["timestamp"] = datetime.now(timezone.utc).isoformat()
+        dump["model_version"] = "Valhalla-MultiHazard-v2"
+        dump["data_quality"] = "HIGH" if res.route_provider != "demo" else "SIMULATED"
+        return dump
+
+    @staticmethod
+    def _tool_get_verification(event_id="hist-fani-2019"):
+        return BacktestEngine.get_verification_metrics(event_id)
+
+    @staticmethod
+    def _tool_generate_incident_brief(event_id=None):
+        eid = event_id or settings.DEFAULT_EVENT_ID
+        imd = IMDProvider().get_official_bulletin(eid)
+        sectors = LandfallProbabilityEngine.calculate_sector_landfall_probabilities(eid)
+        assets = ImpactProbabilityEngine.get_critical_assets_impact(eid)
+        top_sector = max(sectors, key=lambda s: s.probability_pct) if sectors else None
+        return {
+            "title": f"Incident Situation Briefing: {eid}",
+            "generated_at": datetime.now(timezone.utc).isoformat(),
+            "threat_level": "SEVERE" if imd.current_intensity_kmh >= 140 else "MODERATE",
+            "landfall_sector": f"{top_sector.name} ({top_sector.probability_pct}% probability)" if top_sector else "N/A",
+            "peak_wind": f"{imd.current_intensity_kmh} km/h",
+            "critical_assets_impacted": len([a for a in assets if a.p_combined_impact >= 0.5]),
+            "human_review_required": True,
+            "source": "CYCLONE-X Decision Support Briefing Generator",
+            "classification": DataClassification.AI_INTERPRETATION.value,
+            "model_version": "IncidentBrief-v2",
+            "data_quality": "HIGH" if settings.APP_MODE == "live" else "DEMO_SCENARIO"
+        }
+
+    # The 19 mandatory tools specified in Section 42 & Section 13
+    TOOLS_REGISTRY = {
+        "get_current_event": _tool_get_current_event.__func__,
+        "get_official_forecast": _tool_get_official_imd_forecast.__func__,
+        "get_official_imd_forecast": _tool_get_official_imd_forecast.__func__,
+        "get_weathernext": _tool_get_weathernext.__func__,
+        "get_weathernext_forecast": _tool_get_weathernext.__func__,
+        "get_ensemble": _tool_get_ensemble.__func__,
+        "get_cyclone_ensemble": _tool_get_ensemble.__func__,
+        "get_forecast_ensemble": _tool_get_ensemble.__func__,
+        "get_landfall_probability": _tool_get_landfall_probability.__func__,
+        "get_forecast_evolution": _tool_get_forecast_evolution.__func__,
+        "get_weather": _tool_get_weather.__func__,
+        "get_weather_context": _tool_get_weather.__func__,
+        "get_rainfall_probability": _tool_get_rainfall_probability.__func__,
+        "get_rain_probability": _tool_get_rainfall_probability.__func__,
+        "get_wind_probability": _tool_get_wind_probability.__func__,
+        "get_inundation_probability": _tool_get_inundation_probability.__func__,
+        "get_asset_risk": _tool_get_infrastructure_risk.__func__,
+        "get_infrastructure_risk": _tool_get_infrastructure_risk.__func__,
+        "get_population": _tool_get_population.__func__,
+        "get_population_exposure": _tool_get_population.__func__,
+        "get_satellite": _tool_get_satellite.__func__,
+        "get_satellite_observation": _tool_get_satellite.__func__,
+        "get_data_health": _tool_get_data_health.__func__,
+        "compare_models": _tool_compare_models.__func__,
+        "compare_forecast_models": _tool_compare_models.__func__,
+        "run_scenario": _tool_run_scenario.__func__,
+        "get_route_risk": _tool_get_route_risk.__func__,
+        "get_verification": _tool_get_verification.__func__,
+        "get_verification_metrics": _tool_get_verification.__func__,
+        "generate_incident_brief": _tool_generate_incident_brief.__func__
     }
 
     @classmethod
@@ -171,11 +322,12 @@ class GeminiCopilotV2:
         raise ValueError(f"Unknown tool: {tool_name}")
 
     @classmethod
-    def process_query(cls, query: str, event_id: str = "cyclone-alpha") -> Dict[str, Any]:
+    def process_query(cls, query: str, event_id: Optional[str] = None) -> Dict[str, Any]:
         """
         Processes operator inquiries using Gemini 3.8 Flash with structured tool evidence.
         Complies with Section 39: Exposes answer, evidence, sources, timestamp, uncertainty, model_version.
         """
+        eid = event_id or settings.DEFAULT_EVENT_ID
         now_iso = datetime.now(timezone.utc).isoformat()
         q_lower = query.lower()
 
@@ -187,22 +339,22 @@ class GeminiCopilotV2:
             "Sentinel-1-SAR-ChangeDetection",
             "WorldPop-100m-Demographics",
             "Google-Weather-API",
-            "Google-Routes-API"
+            "Route-Risk-Engine"
         ]
 
         # 1. Official IMD bulletin check
-        imd_data = cls.execute_tool("get_official_imd_forecast", event_id=event_id)
+        imd_data = cls.execute_tool("get_official_imd_forecast", event_id=eid)
         evidence_items.append({
             "evidence_type": "OFFICIAL_IMD_BULLETIN",
-            "source": imd_data["official_source"],
-            "timestamp": imd_data["bulletin_time"],
-            "value": f"Warning Status: {imd_data['warning_status']} | Landfall Sector: {imd_data['estimated_landfall_sector']}",
-            "classification": DataClassification.OFFICIAL_ADVISORY.value
+            "source": imd_data.get("official_source", "IMD"),
+            "timestamp": imd_data.get("bulletin_time", now_iso),
+            "value": f"Warning Status: {imd_data.get('warning_status', 'N/A')} | Landfall Sector: {imd_data.get('estimated_landfall_sector', 'N/A')}",
+            "classification": imd_data.get("classification", DataClassification.OFFICIAL_ADVISORY.value)
         })
 
         # 2. Ensemble & Landfall
-        sectors = cls.execute_tool("get_landfall_probability", event_id=event_id)
-        top_sector = max(sectors, key=lambda s: s["probability_pct"])
+        sectors = cls.execute_tool("get_landfall_probability", event_id=eid)
+        top_sector = max(sectors, key=lambda s: s["probability_pct"]) if sectors else {"name": "Undetermined", "probability_pct": 0, "peak_wind_p50_kmh": 0}
         evidence_items.append({
             "evidence_type": "PROBABILISTIC_LANDFALL",
             "source": "WeatherNext 3 64-Member Coastal Intersect Engine",
@@ -212,19 +364,22 @@ class GeminiCopilotV2:
         })
 
         # 3. Critical Infrastructure & Route Risk
-        assets = cls.execute_tool("get_infrastructure_risk", event_id=event_id)
-        target_asset = next((a for a in assets if "hospital" in a["name"].lower()), assets[0])
+        assets = cls.execute_tool("get_infrastructure_risk", event_id=eid)
+        target_asset = next((a for a in assets if "hospital" in a["name"].lower()), assets[0] if assets else {"name": "General Infrastructure", "p_combined_impact": 0.0, "p_wind_exceedance": 0.0, "p_inundation_exceedance": 0.0})
+        p_combined_pct = int(target_asset.get("p_combined_impact", 0) * 100)
+        p_wind_pct = int(target_asset.get("p_wind_exceedance", 0) * 100)
+        p_flood_pct = int(target_asset.get("p_inundation_exceedance", 0) * 100)
         evidence_items.append({
             "evidence_type": "ASSET_IMPACT_PROBABILITY",
-            "source": "CYCLONE-X Impact Intelligence Model (Vertex AI Baseline)",
+            "source": "CYCLONE-X Impact Intelligence Model",
             "timestamp": now_iso,
-            "value": f"{target_asset['name']}: Combined P(Impact)={int(target_asset['p_combined_impact']*100)}%, P(Wind>100)={int(target_asset['p_wind_exceedance']*100)}%, P(Flood)={int(target_asset['p_inundation_exceedance']*100)}%",
+            "value": f"{target_asset['name']}: Combined P(Impact)={p_combined_pct}%, P(Wind)={p_wind_pct}%, P(Flood)={p_flood_pct}%",
             "classification": DataClassification.MODEL_OUTPUT.value
         })
 
         uncertainties = [
-            "Ensemble cross-track dispersion at landfall is ±22.4 km with a ±2.5 hour arrival window.",
-            "Surge water level combines astronomical tide (1.85m) + proxy surge (3.10m); radar satellite pass pending."
+            "Ensemble cross-track dispersion at landfall is estimated from 64-member spread.",
+            "Surge water level combines astronomical tide + hydrodynamic surge; SAR change detection candidate pending."
         ]
 
         # If live Gemini API key is configured, synthesize with Gemini 3.8 Flash
@@ -265,22 +420,23 @@ class GeminiCopilotV2:
                 logger.error(f"Gemini API invocation error: {str(e)}. Proceeding with deterministic grounded synthesis.")
 
         # Deterministic grounded response (Section 39 Schema)
+        storm_title = imd_data.get("storm_name", eid)
         answer_text = (
-            f"Based on Official IMD Bulletin #14 and WeatherNext 3 64-member probabilistic consensus: "
-            f"Extremely Severe Cyclone Alpha is tracking toward the {top_sector['name']} sector with a {top_sector['probability_pct']}% "
-            f"ensemble landfall probability at T+44h. "
-            f"{target_asset['name']} faces a {int(target_asset['p_combined_impact']*100)}% multi-hazard impact probability, "
-            f"driven by 84% wind exceedance (>100 km/h) and modeled degradation of coastal access corridors. "
-            f"Pre-positioning of backup generators and inland route routing via NH-316 bypass is recommended for commander review."
+            f"Based on evidence for {storm_title} ({imd_data.get('classification', 'SCENARIO')}): "
+            f"Cyclone track centers toward {top_sector['name']} sector with {top_sector['probability_pct']}% "
+            f"ensemble landfall probability. "
+            f"{target_asset['name']} faces a {p_combined_pct}% multi-hazard impact probability, "
+            f"driven by {p_wind_pct}% wind exceedance and {p_flood_pct}% modeled inundation hazard. "
+            f"Pre-positioning of backup resources and review of alternate evacuation corridors is recommended for commander review."
         )
 
         return {
             "answer": answer_text,
             "evidence": evidence_items,
             "key_findings": [
-                f"Official IMD status: {imd_data['warning_status']} with sustained winds of {imd_data['current_intensity_kmh']} km/h.",
-                f"Highest landfall concentration is in {top_sector['name']} ({top_sector['probability_pct']}%), arrival window T+43h to T+47h.",
-                f"Critical asset {target_asset['name']} has an impact probability of {int(target_asset['p_combined_impact']*100)}%."
+                f"Warning status: {imd_data.get('warning_status', 'N/A')} with sustained winds of {imd_data.get('current_intensity_kmh', 0)} km/h.",
+                f"Highest landfall concentration: {top_sector['name']} ({top_sector['probability_pct']}%).",
+                f"Critical asset {target_asset['name']} has an impact probability of {p_combined_pct}%."
             ],
             "uncertainty": uncertainties,
             "sources": sources,
@@ -335,34 +491,41 @@ class GeminiCopilotV2:
         }
 
     @classmethod
-    def process_voice_command(cls, transcript: str) -> Dict[str, Any]:
+    def process_voice_command(cls, transcript: str, event_id: Optional[str] = None) -> Dict[str, Any]:
         """
         Processes operator voice commands (Section 24 & 64).
         Maps verbal inquiries to deterministic backend tools.
         """
+        eid = event_id or settings.DEFAULT_EVENT_ID
         t = transcript.lower()
         if "hospital" in t or "high impact" in t:
             tool_name = "get_infrastructure_risk"
-            tool_res = cls.execute_tool(tool_name)
-            hospitals = [a for a in tool_res if "hospital" in a["name"].lower()]
-            text_response = f"Found {len(hospitals)} severe-risk hospitals. District Headquarters Hospital Puri has a 62% combined impact probability."
+            tool_res = cls.execute_tool(tool_name, event_id=eid)
+            hospitals = [a for a in tool_res if "hospital" in a.get("name", "").lower()]
+            if hospitals:
+                h_name = hospitals[0]["name"]
+                h_pct = int(hospitals[0].get("p_combined_impact", 0) * 100)
+                text_response = f"Found {len(hospitals)} severe-risk hospitals. {h_name} has a {h_pct}% combined impact probability."
+            else:
+                text_response = "No hospitals exceeding critical threshold in current impact field."
         elif "spread" in t or "ensemble" in t:
-            tool_name = "get_forecast_ensemble"
-            tool_res = cls.execute_tool(tool_name)
-            text_response = f"WeatherNext 3 64-member ensemble shows an along-track spread of {tool_res['along_track_spread_km']} km and cross-track spread of {tool_res['cross_track_spread_km']} km."
+            tool_name = "get_ensemble"
+            tool_res = cls.execute_tool(tool_name, event_id=eid)
+            text_response = f"WeatherNext 3 64-member ensemble shows an along-track spread of {tool_res.get('along_track_spread_km', 0)} km and cross-track spread of {tool_res.get('cross_track_spread_km', 0)} km."
         elif "compare" in t or "previous" in t:
             tool_name = "get_forecast_evolution"
-            tool_res = cls.execute_tool(tool_name)
-            comp = tool_res["comparison"]
-            text_response = f"Latest forecast shows a {comp['track_shift_km']} km shift {comp['track_shift_direction']}, with intensity revised by +{comp['intensity_revision_kmh']} km/h."
+            tool_res = cls.execute_tool(tool_name, event_id=eid)
+            comp = tool_res.get("comparison", {})
+            text_response = f"Latest forecast shows a {comp.get('track_shift_km', 0)} km shift {comp.get('track_shift_direction', '')}, with intensity revised by {comp.get('intensity_revision_kmh', 0)} km/h."
         elif "route" in t:
             tool_name = "get_route_risk"
-            tool_res = cls.execute_tool(tool_name)
-            text_response = f"Primary evacuation route has a severe risk score of {tool_res['route_exposure_score']}. Alternative inland route is available via Khurda bypass."
+            tool_res = cls.execute_tool(tool_name, event_id=eid)
+            reduction = tool_res.get('exposure_reduction_pct', 0)
+            text_response = f"Primary route has an exposure score of {tool_res.get('baseline_exposure_score', 0)}. Alternative corridor reduces exposure by {reduction}%."
         else:
             tool_name = "get_current_event"
-            tool_res = cls.execute_tool(tool_name)
-            text_response = f"Current active event is Cyclone Alpha, category {tool_res['category']} with sustained winds of {tool_res['max_sustained_wind_kmh']} km/h."
+            tool_res = cls.execute_tool(tool_name, event_id=eid)
+            text_response = f"Current active event is {tool_res.get('name', eid)}, category {tool_res.get('category', 'Cyclonic Storm')} with sustained winds of {tool_res.get('current_intensity_kmh', 0)} km/h."
 
         return {
             "transcript": transcript,

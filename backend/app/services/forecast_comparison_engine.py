@@ -25,7 +25,7 @@ class ForecastComparisonEngine:
     """
 
     @staticmethod
-    def get_multi_model_consensus(event_id: str = "cyclone-alpha") -> MultiModelConsensus:
+    def get_multi_model_consensus(event_id: str = "DEMO-TC-2026-ALPHA") -> MultiModelConsensus:
         """
         Synthesizes tracks from Official IMD, WeatherNext Cyclones (DeepMind),
         and ECMWF IFS into a multi-model consensus with inter-model spread metrics.
@@ -162,7 +162,7 @@ class ForecastComparisonEngine:
         )
 
     @staticmethod
-    def get_forecast_evolution(event_id: str = "cyclone-alpha") -> Dict[str, Any]:
+    def get_forecast_evolution(event_id: str = "DEMO-TC-2026-ALPHA") -> Dict[str, Any]:
         """
         Compares successive forecast runs (00Z, 06Z, 12Z, 18Z) to highlight
         run-to-run consistency, track shift vector, and intensity revisions.
@@ -238,6 +238,10 @@ class ForecastComparisonEngine:
         )
 
         return {
+            "source": "WeatherNext Cyclones Multi-Cycle Evolution Engine",
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "model_version": "MultiCycle-v2",
+            "data_quality": "HIGH",
             "runs": runs,
             "all_runs": runs,
             "latest_run": curr,

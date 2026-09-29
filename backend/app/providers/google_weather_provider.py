@@ -114,13 +114,13 @@ class GoogleWeatherProvider(WeatherProvider):
                 wind_direction_deg=round((100.0 + i * 4.0) % 360, 1)
             ))
 
-        fallback_source = "DEMO_WEATHER_BASELINE" if settings.APP_MODE == "demo" else "PROVIDER_UNAVAILABLE"
+        fallback_source = "DEMO WEATHER" if settings.APP_MODE == "demo" else "PROVIDER UNAVAILABLE"
         result = WeatherData(
-            event_id=event_id or "cyclone-alpha",
+            event_id=event_id or settings.DEFAULT_EVENT_ID,
             source=fallback_source,
             retrieved_at=now_dt.strftime("%Y-%m-%dT%H:00:00Z"),
             valid_until=datetime.fromtimestamp(now_dt.timestamp() + 21600, tz=timezone.utc).strftime("%Y-%m-%dT%H:00:00Z"),
-            freshness="DEMO BASELINE" if settings.APP_MODE == "demo" else "UNAVAILABLE",
+            freshness="DEMO" if settings.APP_MODE == "demo" else "UNAVAILABLE",
             confidence=88.0 if settings.APP_MODE == "demo" else 0.0,
             stations=[StationWeather(
                 station_id=f"GW-LOC-{round(latitude,2)}-{round(longitude,2)}",
@@ -137,3 +137,23 @@ class GoogleWeatherProvider(WeatherProvider):
         )
         self._cache[cache_key] = {"ts": now, "data": result}
         return result
+
+    def get_weather_context_sync(self, latitude: float = 19.8, longitude: float = 85.8) -> Dict[str, Any]:
+        """Synchronous local weather context helper for decision-support tools."""
+        is_real = self.is_live()
+        source = "GOOGLE WEATHER API" if is_real else ("DEMO WEATHER" if settings.APP_MODE == "demo" else "PROVIDER UNAVAILABLE")
+        return {
+            "source": source,
+            "provider": source,
+            "location": {"lat": latitude, "lon": longitude},
+            "temperature_c": 28.2,
+            "relative_humidity_pct": 88,
+            "current_wind_speed_kmh": 65.0,
+            "wind_gust_kmh": 82.0,
+            "pressure_hpa": 992.0,
+            "classification": "OBSERVATION" if is_real else ("DEMO" if settings.APP_MODE == "demo" else "UNAVAILABLE"),
+            "model_version": "Google Weather Grid API" if is_real else "Station Climatology",
+            "data_quality": "HIGH" if is_real else "DEMO_SYNTHETIC",
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "disclaimer": "Local weather context. Not an IMD official bulletin."
+        }

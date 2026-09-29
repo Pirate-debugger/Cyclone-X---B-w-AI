@@ -16,6 +16,7 @@ class DataClassification(str, Enum):
     OFFICIAL_SOURCE_UNAVAILABLE = "OFFICIAL_SOURCE_UNAVAILABLE"
     PROVIDER_UNAVAILABLE = "PROVIDER_UNAVAILABLE"
     DEMO = "DEMO"
+    DEMO_DATA = "DEMO"
 
 class FreshnessState(str, Enum):
     REAL_TIME = "REAL_TIME"
@@ -93,7 +94,23 @@ class EnsembleAggregationResult(BaseModel):
     cross_track_spread_km: float
     forecast_confidence_pct: float
     primary_divergence_notes: str
+    prob_wind_exceed_100kmh: Optional[float] = None
+    prob_wind_exceed_140kmh: Optional[float] = None
+    prob_wind_exceed_180kmh: Optional[float] = None
+    landfall_probability_pct: Optional[float] = None
     classification: DataClassification = DataClassification.ENSEMBLE
+
+    @property
+    def mean_intensity_kmh(self) -> float:
+        return self.wind_percentiles[-1].mean if self.wind_percentiles else 0.0
+
+    @property
+    def p50_intensity_kmh(self) -> float:
+        return self.wind_percentiles[-1].p50 if self.wind_percentiles else 0.0
+
+    @property
+    def p90_intensity_kmh(self) -> float:
+        return self.wind_percentiles[-1].p90 if self.wind_percentiles else 0.0
 
 # 2. Forecast Evolution & Comparison Schemas
 class ForecastRunComparison(BaseModel):
@@ -168,6 +185,7 @@ class AssetImpactProbability(BaseModel):
     p_rain_exceedance: float
     p_inundation_exceedance: float
     p_combined_impact: float
+    p_service_disruption: Optional[float] = None
     backup_power: str
     flood_protection: str
     road_access_status: str
@@ -175,6 +193,18 @@ class AssetImpactProbability(BaseModel):
     cascading_details: Optional[str] = None
     data_quality_pct: float
     expected_downtime_hours: Optional[float] = None
+
+    @property
+    def p_wind_threshold(self) -> float:
+        return self.p_wind_exceedance
+
+    @property
+    def p_rain_threshold(self) -> float:
+        return self.p_rain_exceedance
+
+    @property
+    def p_inundation_threshold(self) -> float:
+        return self.p_inundation_exceedance
 
 class CascadingImpactNode(BaseModel):
     node_id: str
@@ -241,6 +271,7 @@ class OfficialForecastPoint(BaseModel):
 class OfficialForecastRun(BaseModel):
     event_id: str
     cyclone_name: str
+    cyclone_category: Optional[str] = "Very Severe Cyclonic Storm (VSCS)"
     bulletin_number: Optional[int] = 0
     bulletin_time: str
     next_bulletin_time: Optional[str] = None
@@ -258,6 +289,10 @@ class OfficialForecastRun(BaseModel):
     official_source_url: str = "https://mausam.imd.gov.in/cyclone"
     classification: DataClassification = DataClassification.OFFICIAL_ADVISORY
     disclaimer: str = "OFFICIAL IMD GOVERNMENT WARNING. Legally authoritative civil defense forecast."
+
+    @property
+    def storm_name(self) -> str:
+        return self.cyclone_name
 
 # 8. Route Risk Intelligence Schemas (Sections 8 & 37)
 class RouteRiskIntersection(BaseModel):
@@ -283,6 +318,14 @@ class RouteRiskAssessment(BaseModel):
     critical_bridges_crossed: List[Dict[str, Any]]
     alternative_route_available: bool
     alternative_route_notes: Optional[str] = None
+    baseline_exposure_score: Optional[float] = None
+    alternative_exposure_score: Optional[float] = None
+    exposure_reduction_pct: Optional[float] = None
+    route_provider: str = "valhalla"
+    source: str = "CYCLONE-X Multi-Hazard Route Risk Engine"
+    timestamp: Optional[str] = None
+    model_version: Optional[str] = "Valhalla-MultiHazard-v2"
+    data_quality: Optional[str] = "HIGH"
     route_geojson: Dict[str, Any]
     disclaimer: str = "Route intersects modeled high-risk area. Not an official road closure notice unless verified by civil authorities."
     classification: DataClassification = DataClassification.MODEL_OUTPUT

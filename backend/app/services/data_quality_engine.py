@@ -10,7 +10,7 @@ class DataQualityEngine:
     """
 
     @staticmethod
-    def evaluate_pipeline_quality(event_id: str = "cyclone-alpha") -> DataQualityReport:
+    def evaluate_pipeline_quality(event_id: str = "DEMO-TC-2026-ALPHA") -> DataQualityReport:
         completeness = 0.94        # 94% telemetry packets received without dropout
         freshness = 0.92           # Data retrieved within normal operational refresh cycle
         coverage = 0.96            # Complete spatial polygon coverage across northern Bay of Bengal

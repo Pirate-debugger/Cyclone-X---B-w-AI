@@ -22,16 +22,25 @@ class RiskBand(str, Enum):
 class InfrastructureType(str, Enum):
     HOSPITAL = "hospital"
     PRIMARY_HEALTH_CENTRE = "primary_health_centre"
+    PHC = "PHC"
     POWER_STATION = "power_station"
+    POWER = "power"
     ELECTRICITY_SUBSTATION = "electricity_substation"
+    SUBSTATION = "substation"
     MAJOR_ROAD = "major_road"
+    ROAD = "road"
     BRIDGE = "bridge"
     RAILWAY = "railway"
     AIRPORT = "airport"
     EMERGENCY_SHELTER = "emergency_shelter"
+    SHELTER = "shelter"
     WATER_FACILITY = "water_facility"
+    WATER = "water"
     COMMUNICATION_FACILITY = "communication_facility"
+    TELECOM = "telecom"
     GOVERNMENT_FACILITY = "government_facility"
+    GOVERNMENT = "government"
+    PORT = "port"
 
 # Standard API Envelope
 class ResponseMeta(BaseModel):
@@ -149,11 +158,18 @@ class InfrastructureAsset(BaseModel):
     criticality: int
     capacity: Optional[int] = None
     administrative_area: str
+    state: Optional[str] = None
+    district: Optional[str] = None
+    city: Optional[str] = None
     elevation_m: float
     distance_to_coast_km: float
+    backup_power: Optional[bool] = None
+    road_access: Optional[bool] = None
+    population_served: Optional[int] = None
     geometry: GeoJSONGeometry
     source: str
     data_classification: str = "DEMO DATA"
+    data_quality: str = "HIGH"
     last_verified: str
     properties: Optional[Dict[str, Any]] = None
 

@@ -23,12 +23,12 @@ class EnsembleAggregator:
         self.wn3_provider = WeatherNext3Provider()
 
     @classmethod
-    def get_ensemble_aggregation(cls, event_id: str = "cyclone-alpha") -> EnsembleAggregationResult:
+    def get_ensemble_aggregation(cls, event_id: Optional[str] = None) -> EnsembleAggregationResult:
         instance = cls()
         return instance.aggregate_ensemble()
 
     @classmethod
-    def get_all_raw_members(cls, event_id: str = "cyclone-alpha") -> List[ForecastMember]:
+    def get_all_raw_members(cls, event_id: Optional[str] = None) -> List[ForecastMember]:
         instance = cls()
         return instance.wn3_provider.generate_64_member_ensemble()
 
@@ -127,10 +127,33 @@ class EnsembleAggregator:
         # Objective track confidence score based on spread
         track_confidence = max(45.0, min(92.0, 95.0 - (cross_spread * 0.42)))
 
+        # Threshold exceedance probabilities calculated strictly from members (Requirement 26)
+        distinct_ids = list(set(m.member_id for m in members))
+        total_distinct = len(distinct_ids) or 1
+        exceed_100 = 0
+        exceed_140 = 0
+        exceed_180 = 0
+        for m_id in distinct_ids:
+            member_winds = [m.max_wind_kmh for m in members if m.member_id == m_id]
+            if any(w >= 100.0 for w in member_winds):
+                exceed_100 += 1
+            if any(w >= 140.0 for w in member_winds):
+                exceed_140 += 1
+            if any(w >= 180.0 for w in member_winds):
+                exceed_180 += 1
+
+        prob_100 = round(exceed_100 / total_distinct, 2)
+        prob_140 = round(exceed_140 / total_distinct, 2)
+        prob_180 = round(exceed_180 / total_distinct, 2)
+        top_landfall_prob = round(max([s.probability_pct for s in sectors], default=0.0), 1)
+
+        model_name = members[0].model if members else "Ensemble Model"
+        classification = members[0].classification if members else DataClassification.ENSEMBLE
+
         return EnsembleAggregationResult(
             ensemble_id="WN3-ENS-2026-ALPHA",
-            model_name="WeatherNext 3 (64-member)",
-            initialization_time=members[0].initialization_time,
+            model_name=model_name,
+            initialization_time=members[0].initialization_time if members else "2026-09-27T00:00:00Z",
             member_count=total_members_count,
             mean_track=mean_track,
             median_track=median_track,
@@ -143,7 +166,11 @@ class EnsembleAggregator:
             cross_track_spread_km=round(cross_spread, 1),
             forecast_confidence_pct=round(track_confidence, 1),
             primary_divergence_notes=f"Ensemble tracks exhibit tight convergence through +36h; cross-track spread expands to {cross_spread:.1f}km past landfall near +48h.",
-            classification=DataClassification.ENSEMBLE
+            prob_wind_exceed_100kmh=prob_100,
+            prob_wind_exceed_140kmh=prob_140,
+            prob_wind_exceed_180kmh=prob_180,
+            landfall_probability_pct=top_landfall_prob,
+            classification=classification
         )
 
     def _build_track_density_grid(self, members: List[ForecastMember]) -> Dict[str, Any]:
@@ -247,7 +274,7 @@ class LandfallProbabilityEngine:
     ]
 
     @classmethod
-    def calculate_sector_landfall_probabilities(cls, event_id: str = "cyclone-alpha") -> List[LandfallSectorProbability]:
+    def calculate_sector_landfall_probabilities(cls, event_id: str = "DEMO-TC-2026-ALPHA") -> List[LandfallSectorProbability]:
         instance = cls()
         members = WeatherNext3Provider().generate_64_member_ensemble()
         return instance.calculate_landfall_probabilities(members)

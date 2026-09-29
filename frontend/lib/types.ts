@@ -94,6 +94,8 @@ export interface TrackCollection {
   disclaimer: string;
   observed_track: BestTrackPoint[];
   forecast_track: ForecastTrackPoint[];
+  observed?: any[];
+  forecast?: any[];
 }
 
 export interface HourlyWeather {

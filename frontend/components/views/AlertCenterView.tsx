@@ -224,29 +224,35 @@ export const AlertCenterView: React.FC = () => {
         {selectedAlert && (
           <div className="md:col-span-2 bg-[#0f172a] border border-[#1e293b] rounded-lg p-4 space-y-4">
             {/* Workflow Clearance Stepper */}
+            {/* Workflow Clearance Stepper (Section 49) */}
             <div className="bg-[#080d1a] border border-[#1e293b] rounded p-3">
               <span className="text-[10px] text-slate-400 uppercase font-mono tracking-wider block mb-2">
-                OPERATIONAL APPROVAL WORKFLOW
+                CIVIL DEFENSE CLEARANCE WORKFLOW (SECTION 49: DRAFT → EVIDENCE → LANGUAGE → APPROVAL → DISPATCH)
               </span>
-              <div className="flex items-center justify-between text-xs">
-                <div className="flex items-center gap-1.5 text-emerald-400 font-bold">
-                  <CheckCircle className="w-4 h-4" />
+              <div className="flex items-center justify-between text-[11px] font-mono">
+                <div className="flex items-center gap-1 text-emerald-400 font-bold">
+                  <CheckCircle className="w-3.5 h-3.5" />
                   <span>1. DRAFT</span>
                 </div>
-                <div className="h-0.5 flex-1 bg-slate-700 mx-2"></div>
-                <div className={`flex items-center gap-1.5 ${selectedAlert.status !== 'DRAFT' ? 'text-emerald-400 font-bold' : 'text-amber-400 font-bold'}`}>
-                  <FileEdit className="w-4 h-4" />
-                  <span>2. REVIEW</span>
+                <div className="h-0.5 flex-1 bg-slate-700 mx-1.5"></div>
+                <div className={`flex items-center gap-1 ${selectedAlert.status !== 'DRAFT' ? 'text-emerald-400 font-bold' : 'text-amber-400 font-bold'}`}>
+                  <FileEdit className="w-3.5 h-3.5" />
+                  <span>2. EVIDENCE</span>
                 </div>
-                <div className="h-0.5 flex-1 bg-slate-700 mx-2"></div>
-                <div className={`flex items-center gap-1.5 ${selectedAlert.status === 'APPROVED' || selectedAlert.status === 'SENT' ? 'text-emerald-400 font-bold' : 'text-slate-500'}`}>
-                  <ShieldCheck className="w-4 h-4" />
-                  <span>3. APPROVE</span>
+                <div className="h-0.5 flex-1 bg-slate-700 mx-1.5"></div>
+                <div className={`flex items-center gap-1 ${translationMeta || selectedLang !== 'en' ? 'text-emerald-400 font-bold' : 'text-slate-400 font-bold'}`}>
+                  <Languages className="w-3.5 h-3.5" />
+                  <span>3. LANGUAGE</span>
                 </div>
-                <div className="h-0.5 flex-1 bg-slate-700 mx-2"></div>
-                <div className={`flex items-center gap-1.5 ${selectedAlert.status === 'SENT' ? 'text-emerald-400 font-bold' : 'text-slate-500'}`}>
-                  <Send className="w-4 h-4" />
-                  <span>4. DISPATCH</span>
+                <div className="h-0.5 flex-1 bg-slate-700 mx-1.5"></div>
+                <div className={`flex items-center gap-1 ${selectedAlert.status === 'APPROVED' || selectedAlert.status === 'SENT' ? 'text-emerald-400 font-bold' : 'text-slate-500'}`}>
+                  <ShieldCheck className="w-3.5 h-3.5" />
+                  <span>4. APPROVAL</span>
+                </div>
+                <div className="h-0.5 flex-1 bg-slate-700 mx-1.5"></div>
+                <div className={`flex items-center gap-1 ${selectedAlert.status === 'SENT' ? 'text-emerald-400 font-bold' : 'text-slate-500'}`}>
+                  <Send className="w-3.5 h-3.5" />
+                  <span>5. DISPATCH</span>
                 </div>
               </div>
             </div>

@@ -1,20 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { Settings, Shield, Sliders, Database, Key, CheckCircle, RefreshCw, Lock, Map as MapIcon, Globe } from 'lucide-react';
 import { getApiKey, setApiKey } from '@/lib/api';
-import { CARTO_DEFAULT_KEY } from '../MapContainer';
 
 export const SettingsView: React.FC = () => {
   const [appMode, setAppMode] = useState<'demo' | 'live'>('demo');
   const [selectedModel, setSelectedModel] = useState('gemini-3.8-flash');
   const [currentRole, setCurrentRole] = useState<'viewer' | 'operator' | 'reviewer' | 'admin'>('admin');
   const [apiKeyInput, setApiKeyInput] = useState(() => (typeof window !== 'undefined' ? getApiKey() : 'demo-admin-key'));
-  const [cartoKeyInput, setCartoKeyInput] = useState(() => {
+  const [mapProvider, setMapProvider] = useState<'openfreemap' | 'pmtiles' | 'maptiler' | 'google-maps'>(() => {
     if (typeof window !== 'undefined') {
-      return localStorage.getItem('cyclonex_carto_api_key') || CARTO_DEFAULT_KEY;
+      return (localStorage.getItem('cyclonex_map_provider') as any) || 'openfreemap';
     }
-    return CARTO_DEFAULT_KEY;
+    return 'openfreemap';
   });
-  const [cartoStatus, setCartoStatus] = useState<'verified' | 'testing' | 'unverified'>('verified');
   const [hazardWeight, setHazardWeight] = useState(0.40);
   const [exposureWeight, setExposureWeight] = useState(0.35);
   const [vulnerabilityWeight, setVulnerabilityWeight] = useState(0.25);
@@ -23,29 +21,12 @@ export const SettingsView: React.FC = () => {
   const handleSave = () => {
     setApiKey(apiKeyInput.trim());
     if (typeof window !== 'undefined') {
-      localStorage.setItem('cyclonex_carto_api_key', cartoKeyInput.trim());
+      localStorage.setItem('cyclonex_map_provider', mapProvider);
     }
-    setSavedNotice(`Configuration saved. Basemap Key and Operator Clearance: ${currentRole.toUpperCase()}`);
+    setSavedNotice(`Configuration saved. Map Provider: ${mapProvider.toUpperCase()} | Clearance: ${currentRole.toUpperCase()}`);
     setTimeout(() => setSavedNotice(null), 3500);
   };
 
-  const testCartoKey = async () => {
-    setCartoStatus('testing');
-    try {
-      const res = await fetch(`https://a.basemaps.cartocdn.com/rastertiles/dark_all/6/50/28@2x.png?key=${cartoKeyInput.trim()}`);
-      if (res.ok) {
-        setCartoStatus('verified');
-        setSavedNotice('CARTO Basemap API Key Verified: 200 OK (Full Retina Access)');
-      } else {
-        setCartoStatus('unverified');
-        setSavedNotice(`CARTO Key Verification Failed (Status: ${res.status})`);
-      }
-    } catch {
-      setCartoStatus('verified'); // CORS or offline fallback
-      setSavedNotice('CARTO Basemap Key saved.');
-    }
-    setTimeout(() => setSavedNotice(null), 3500);
-  };
 
   return (
     <div className="w-full h-full p-4 overflow-y-auto space-y-4 select-none text-xs">
@@ -204,56 +185,106 @@ export const SettingsView: React.FC = () => {
         </div>
       </div>
 
-      {/* Geospatial Basemap & Tile Services */}
-      <div className="bg-[#0f172a] border border-[#1e293b] rounded-lg p-4 space-y-3">
+      {/* Geospatial Map Engine & Tile Services (Section 6, 7, 16) */}
+      <div className="bg-[#0f172a] border border-[#1e293b] rounded-lg p-4 space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 text-slate-200 font-bold font-mono">
             <Globe className="w-4 h-4 text-cyan-400" />
-            <span>CARTO BASEMAP & HIGH-DPI RETINA TILE SERVICES</span>
+            <span>MAP ENGINE & GEOSPATIAL TILE ARCHITECTURE</span>
           </div>
-          <span className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-cyan-950/80 border border-cyan-700/80 text-cyan-300 font-mono text-[10px] font-bold">
-            <span className={`w-1.5 h-1.5 rounded-full ${cartoStatus === 'verified' ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`}></span>
-            {cartoStatus === 'verified' ? 'ONLINE: CARTO DARK MATTER HIGH-DPI' : 'VALIDATING KEY'}
+          <span className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-emerald-950/80 border border-emerald-700/80 text-emerald-300 font-mono text-[10px] font-bold">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+            PRIMARY: MAPLIBRE GL JS (ZERO KEY REQUIRED)
           </span>
         </div>
 
-        <div className="bg-[#080d1a] border border-[#1e293b] rounded p-3 space-y-2">
-          <label className="text-slate-300 text-[11px] font-mono block">CARTO Basemaps API Key</label>
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-            <div className="relative flex-1">
-              <input
-                type="text"
-                value={cartoKeyInput}
-                onChange={(e) => setCartoKeyInput(e.target.value)}
-                placeholder="Enter CARTO API Key (e.g. carto_live_key_...)"
-                className="w-full bg-[#0b1329] border border-[#1e293b] rounded px-3 py-2 font-mono text-cyan-300 text-xs focus:outline-none focus:border-cyan-500"
-              />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* MAP PROVIDER SELECTION */}
+          <div className="bg-[#080d1a] border border-[#1e293b] rounded p-3 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-slate-300 text-xs font-mono font-bold">MAP PROVIDER (MAP_PROVIDER)</span>
+              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-cyan-950 border border-cyan-800 text-cyan-300">
+                ACTIVE: {mapProvider.toUpperCase()}
+              </span>
             </div>
-            <button
-              onClick={testCartoKey}
-              className="px-3 py-2 rounded bg-cyan-950/80 hover:bg-cyan-900 border border-cyan-800 text-cyan-300 font-mono font-bold text-[11px] whitespace-nowrap transition-colors flex items-center gap-1"
-            >
-              <RefreshCw className={`w-3.5 h-3.5 ${cartoStatus === 'testing' ? 'animate-spin' : ''}`} />
-              <span>Test & Apply Key</span>
-            </button>
-            <button
-              onClick={() => {
-                setCartoKeyInput(CARTO_DEFAULT_KEY);
+            <select
+              value={mapProvider}
+              onChange={(e) => {
+                const val = e.target.value as any;
+                setMapProvider(val);
                 if (typeof window !== 'undefined') {
-                  localStorage.setItem('cyclonex_carto_api_key', CARTO_DEFAULT_KEY);
+                  localStorage.setItem('cyclonex_map_provider', val);
                 }
-                setSavedNotice('Restored Primary Verified CARTO API Key.');
+                setSavedNotice(`Map Provider switched to ${val.toUpperCase()}`);
                 setTimeout(() => setSavedNotice(null), 3000);
               }}
-              className="px-3 py-2 rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 font-mono font-bold text-[11px] whitespace-nowrap transition-colors"
+              className="w-full bg-[#0b1329] border border-[#1e293b] rounded p-2 text-slate-200 font-mono text-xs focus:outline-none focus:border-cyan-500"
             >
-              Reset Default
-            </button>
+              <option value="openfreemap">OpenFreeMap (Default Zero-Key / Dark Theme)</option>
+              <option value="pmtiles">Enterprise PMTiles (Self-Hosted / GCS Archive)</option>
+              <option value="maptiler">MapTiler (Vector Tiles API)</option>
+              <option value="google-maps">Google Maps (Optional Adapter Only)</option>
+            </select>
+            <p className="text-[11px] text-slate-400">
+              Default: <code className="text-cyan-300 font-mono">openfreemap</code> (https://tiles.openfreemap.org/styles/dark).
+              Recommended production: <code className="text-emerald-300 font-mono">pmtiles</code>.
+            </p>
           </div>
-          <div className="flex items-center justify-between text-[11px] text-slate-400 pt-1">
-            <span>Tile Source: <code className="text-slate-300 font-mono">https://*.basemaps.cartocdn.com/rastertiles/dark_all/&#123;z&#125;/&#123;x&#125;/&#123;y&#125;@2x.png?key=...</code></span>
-            <span className="text-emerald-400 font-mono font-semibold">Dual Basemap Active (Dark Matter + ESRI Satellite)</span>
+
+          {/* BASEMAP STATUS */}
+          <div className="bg-[#080d1a] border border-[#1e293b] rounded p-3 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-slate-300 text-xs font-mono font-bold">BASEMAP STATUS</span>
+              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-950 border border-emerald-800 text-emerald-400 font-bold">
+                CONNECTED
+              </span>
+            </div>
+            <div className="text-[11px] font-mono space-y-1 text-slate-300">
+              <div>Renderer: <span className="text-cyan-400 font-bold">MapLibre GL JS v5.1.0</span></div>
+              <div>Active Style: <span className="text-slate-400">https://tiles.openfreemap.org/styles/dark</span></div>
+              <div>API Key Status: <span className="text-emerald-400 font-semibold">ZERO-KEY (NO KEY NEEDED)</span></div>
+            </div>
           </div>
+
+          {/* PMTILES STATUS */}
+          <div className="bg-[#080d1a] border border-[#1e293b] rounded p-3 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-slate-300 text-xs font-mono font-bold">ENTERPRISE PMTILES STATUS</span>
+              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-blue-950 border border-blue-800 text-blue-300 font-bold">
+                PROTOCOL REGISTERED
+              </span>
+            </div>
+            <div className="text-[11px] font-mono space-y-1 text-slate-400">
+              <div>Protocol: <code className="text-cyan-300">pmtiles://</code> registered with MapLibre</div>
+              <div>Range Requests: <span className="text-emerald-400 font-semibold">SUPPORTED (HTTP 206)</span></div>
+              <div>Storage: <span className="text-slate-300">Google Cloud Storage / Self-Hosted</span></div>
+              <div className="text-[10px] text-slate-500">Resource examples: india.pmtiles, odisha.pmtiles</div>
+            </div>
+          </div>
+
+          {/* OPTIONAL GOOGLE MAPS STATUS */}
+          <div className="bg-[#080d1a] border border-[#1e293b] rounded p-3 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-slate-300 text-xs font-mono font-bold">OPTIONAL GOOGLE MAPS STATUS</span>
+              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-300">
+                OPTIONAL ADAPTER
+              </span>
+            </div>
+            <div className="text-[11px] font-mono space-y-1 text-slate-400">
+              <div>Critical Path: <span className="text-emerald-400 font-bold">REMOVED</span></div>
+              <div>Dashboard Requirement: <span className="text-emerald-400 font-semibold">NOT REQUIRED</span></div>
+              <div>Status: <span className="text-slate-300">Optional adapter (dashboard runs fully without key)</span></div>
+            </div>
+          </div>
+        </div>
+
+        {/* DATA ATTRIBUTION (Section 5) */}
+        <div className="bg-[#080d1a] border border-[#1e293b] rounded p-3 text-[11px] font-mono text-slate-400 space-y-1">
+          <div className="text-slate-300 font-bold">VERIFIED DATA ATTRIBUTION</div>
+          <div>• Basemap: OpenFreeMap © OpenMapTiles | Data from OpenStreetMap contributors</div>
+          <div>• Satellite: European Space Agency (ESA) Copernicus Sentinel-1 SAR via Earth Engine</div>
+          <div>• Ensemble NWP: WeatherNext 3 (Google DeepMind) 64-Member Atmospheric Models</div>
+          <div>• Best Track Archive: NOAA IBTrACS & Official IMD Cyclone Advisories</div>
         </div>
       </div>
 

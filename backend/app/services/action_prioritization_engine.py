@@ -9,7 +9,7 @@ class ActionPrioritizationEngine:
     """
 
     @staticmethod
-    def get_priority_actions(event_id: str = "cyclone-alpha") -> Dict[str, Any]:
+    def get_priority_actions(event_id: str = "DEMO-TC-2026-ALPHA") -> Dict[str, Any]:
         actions = [
             {
                 "action_id": "ACT-001",

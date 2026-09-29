@@ -28,6 +28,10 @@ interface CommandHeaderProps {
   eventTitle?: string;
   latestRunId?: string;
   modelVersion?: string;
+  selectedState?: string;
+  selectedDistrict?: string;
+  onSelectState?: (state: string) => void;
+  onSelectDistrict?: (dist: string) => void;
 }
 
 export const CommandHeader: React.FC<CommandHeaderProps> = ({
@@ -39,7 +43,11 @@ export const CommandHeader: React.FC<CommandHeaderProps> = ({
   isDemo = true,
   eventTitle = "TC-2026-ALPHA (Bay of Bengal)",
   latestRunId = "RUN-18Z",
-  modelVersion = "WeatherNext 3 / Cyclones v2.0"
+  modelVersion = "WeatherNext 3 / Cyclones v2.0",
+  selectedState = "Odisha",
+  selectedDistrict = "Puri",
+  onSelectState,
+  onSelectDistrict
 }) => {
   const [searchValue, setSearchValue] = useState('');
   const [currentTime, setCurrentTime] = useState<string>('');
@@ -109,6 +117,25 @@ export const CommandHeader: React.FC<CommandHeaderProps> = ({
           <div className="bg-[#0f172a] border border-[#1e293b] px-2 py-0.5 rounded flex items-center gap-1">
             <span className="text-slate-500">RUN:</span>
             <span className="text-cyan-400 font-semibold">{latestRunId}</span>
+          </div>
+
+          {/* India-Scale State Selector (Section 9 & 52) */}
+          <div className="bg-[#0f172a] border border-[#334155] px-2 py-0.5 rounded flex items-center gap-1">
+            <span className="text-slate-400">STATE:</span>
+            <select
+              value={selectedState}
+              onChange={(e) => onSelectState && onSelectState(e.target.value)}
+              className="bg-transparent text-cyan-300 font-bold focus:outline-none cursor-pointer"
+            >
+              <option value="Odisha" className="bg-[#0f172a]">Odisha (OD)</option>
+              <option value="West Bengal" className="bg-[#0f172a]">West Bengal (WB)</option>
+              <option value="Andhra Pradesh" className="bg-[#0f172a]">Andhra Pradesh (AP)</option>
+              <option value="Tamil Nadu" className="bg-[#0f172a]">Tamil Nadu (TN)</option>
+              <option value="Gujarat" className="bg-[#0f172a]">Gujarat (GJ)</option>
+              <option value="Kerala" className="bg-[#0f172a]">Kerala (KL)</option>
+              <option value="Goa" className="bg-[#0f172a]">Goa (GA)</option>
+              <option value="Andaman & Nicobar" className="bg-[#0f172a]">A&N Islands (AN)</option>
+            </select>
           </div>
         </div>
       </div>

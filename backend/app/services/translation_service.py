@@ -7,25 +7,40 @@ from app.models.schemas_v2 import MultilingualAdvisory, DataClassification
 
 class TranslationService:
     """
-    Multilingual Advisory Generation & Contextual Review Engine.
-    Section 25 Requirements:
-    - Supported Languages: English (en), Hindi (hi), Telugu (te), Odia (or), Bengali (bn)
-    - Google Cloud Translation API v3 integration with Gemini contextual meteorological review
-    - Every translated advisory stores:
-        source_language, target_language, source_advisory_id, translation_timestamp,
-        translation_engine, human_reviewed, approval_state.
+    Multilingual Advisory Generation & Contextual Review Engine (Section 35).
+    Supported Languages:
+      - en: English
+      - hi: Hindi (हिंदी)
+      - te: Telugu (తెలుగు)
+      - ta: Tamil (தமிழ்)
+      - or: Odia (ଓଡ଼ିଆ)
+      - bn: Bengali (বাংলা)
+    Rules:
+      - If Google Cloud Translation API succeeds -> 'Google Cloud Translation API v3'
+      - If fallback corpus is used -> MUST be labelled 'LOCAL DEMO TRANSLATION'
+      - Never pretend fallback is Google Cloud Translation API.
     """
 
     SUPPORTED_LANGUAGES = {
         "en": "English",
         "hi": "Hindi (हिंदी)",
         "te": "Telugu (తెలుగు)",
+        "ta": "Tamil (தமிழ்)",
         "or": "Odia (ଓଡ଼ିଆ)",
         "bn": "Bengali (বাংলা)"
     }
 
-    # Authentic translated emergency operational corpus
+    # Authentic meteorological emergency operational corpus
     VERIFIED_TRANSLATIONS = {
+        "en": {
+            "title": "OFFICIAL CYCLONE BULLETIN: CYCLONE ALPHA (RED ALERT)",
+            "body": "Extremely Severe Cyclonic Storm 'ALPHA' over Westcentral Bay of Bengal is moving north-northeastwards. Expected to make landfall between Puri and Dhamra on 29th September afternoon with sustained winds of 155-165 km/h.",
+            "directives": [
+                "Immediate evacuation of coastal vulnerable sectors.",
+                "Total suspension of all maritime, port, and fishing activities.",
+                "Hospital emergency generators pre-staged and fueled."
+            ]
+        },
         "hi": {
             "title": "आधिकारिक चक्रवात चेतावनी: चक्रवात अल्फा (रेड अलर्ट)",
             "body": "पश्चिम-मध्य बंगाल की खाड़ी के ऊपर बना अत्यधिक गंभीर चक्रवाती तूफान 'अल्फा' उत्तर-पूर्वोत्तर की ओर बढ़ रहा है। 29 सितंबर की दोपहर को 155-165 किमी/घंटा की रफ्तार से पुरी और धामरा के बीच तट पार करने की संभावना है।",
@@ -48,9 +63,18 @@ class TranslationService:
             "title": "అధికారిక తుఫాను హెచ్చరిక: సైక్లోన్ ఆల్ఫా (రెడ్ అలర్ట్)",
             "body": "పశ్చిమ మధ్య బంగాళాఖాతంలో కొనసాగుతున్న తీవ్ర తుఫాను 'ఆల్ఫా' ఉత్తర-ఈశాన్య దిశగా కదులుతోంది. సెప్టెంబర్ 29 మధ్యాహ్నం 155-165 కిమీ వేగంతో పూరీ-ధామ్రా మధ్య తీరం దాటే అవకాశం ఉంది.",
             "directives": [
-                "తీరప్రాంత ప్రజలు తక్షణమే సురକ୍ଷిత పునరావాస కేంద్రాలకు చేరుకోవాలి.",
+                "తీరప్రాంత ప్రజలు తక్షణమే సురక్షిత పునరావాస కేంద్రాలకు చేరుకోవాలి.",
                 "మత్స్యకారులు సముద్రంలోకి వేటకు వెళ్లరాదు.",
                 "ఆసుపత్రులలో అత్యవసర విద్యుత్ జనరేటర్లను సిద్ధంగా ఉంచండి."
+            ]
+        },
+        "ta": {
+            "title": "அதிகாரப்பூர்வ புயல் எச்சரிக்கை: புயல் ஆல்பா (சிவப்பு எச்சரிக்கை)",
+            "body": "மேற்கு மத்திய வங்காள விரிகுடாவில் தீவிரமடைந்துள்ள அதிதீவிர புயல் 'ஆல்பா' வட-வடகிழக்கு திசையில் நகர்கிறது. செப்டம்பர் 29 பிற்பகலில் 155-165 கிமீ வேகத்தில் புரி மற்றும் தாமரா இடையே கரையை கடக்கும் என எதிர்பார்க்கப்படுகிறது.",
+            "directives": [
+                "கடலோர பகுதிகளில் உள்ள மக்கள் உடனடியாக பாதுகாப்பான புயல் நிவாரண முகாம்களுக்கு செல்லவும்.",
+                "மீனவர்கள் கடலுக்குள் செல்ல வேண்டாம் என்று கண்டிப்பாக எச்சரிக்கப்படுகிறார்கள்.",
+                "மருத்துவமனைகள் மற்றும் அவசர சேவை மையங்களில் ஜெனரேட்டர்களை தயார் நிலையில் வைக்கவும்."
             ]
         },
         "bn": {
@@ -77,6 +101,7 @@ class TranslationService:
         """
         Translates an official advisory from English to target Indian language.
         Integrates Google Cloud Translation API v3 with validated fallback.
+        Truthfully labels engine as 'Google Cloud Translation API v3' or 'LOCAL DEMO TRANSLATION'.
         """
         now_iso = datetime.now(timezone.utc).isoformat()
         target_lang = target_language.lower()
@@ -123,7 +148,7 @@ class TranslationService:
             except Exception as e:
                 logger.warning(f"Cloud Translation API call failed: {str(e)}. Using verified corpus.")
 
-        # Verified meteorological translation
+        # Local calibrated fallback (Section 35: MUST be labelled LOCAL DEMO TRANSLATION)
         trans_data = self.VERIFIED_TRANSLATIONS.get(target_lang, self.VERIFIED_TRANSLATIONS["hi"])
         return MultilingualAdvisory(
             advisory_id=f"ADV-{target_lang.upper()}-{source_advisory_id}",
@@ -134,9 +159,9 @@ class TranslationService:
             translated_title=trans_data["title"],
             translated_advisory_body=trans_data["body"],
             key_action_directives=trans_data["directives"],
-            translation_engine="Google Cloud Translation API v3 (Calibrated Fallback)",
+            translation_engine="LOCAL DEMO TRANSLATION",
             translation_timestamp=now_iso,
             human_reviewed=False,
             approval_state="DRAFT",
-            classification=DataClassification.OFFICIAL_ADVISORY
+            classification=DataClassification.DEMO
         )

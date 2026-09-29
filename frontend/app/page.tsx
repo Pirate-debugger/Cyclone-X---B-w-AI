@@ -27,14 +27,14 @@ import { AICopilotDrawer } from '../components/AICopilotDrawer';
 import { DataHealthDrawer } from '../components/DataHealthDrawer';
 import { EvidenceDrawer } from '../components/EvidenceDrawer';
 
-const GoogleMapContainer = dynamic(
-  () => import('../components/GoogleMapContainer').then((mod) => mod.GoogleMapContainer),
+const MapContainer = dynamic(
+  () => import('../components/MapContainer').then((mod) => mod.MapContainer),
   {
     ssr: false,
     loading: () => (
-      <div className="w-full h-full flex flex-col items-center justify-center bg-[#050914] text-slate-500 font-mono text-xs space-y-2">
+      <div className="w-full h-full flex flex-col items-center justify-center bg-[#050914] text-slate-400 font-mono text-xs space-y-2">
         <div className="w-6 h-6 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin"></div>
-        <span>Initializing Google Maps Platform & Geospatial Layers...</span>
+        <span>Initializing MapLibre GL JS Geospatial Engine (Zero-Key)...</span>
       </div>
     ),
   }
@@ -78,7 +78,9 @@ import {
   getEnsembleAggregation,
   getAssetImpacts,
   getHazardsOverview,
-  getSystemHealth
+  getSystemHealth,
+  getMode,
+  getForecastEvolution
 } from '../lib/api';
 
 export default function CycloneXApp() {
@@ -94,6 +96,8 @@ export default function CycloneXApp() {
   const [selectedInfra, setSelectedInfra] = useState<InfrastructureRiskAssessment | null>(null);
   const [aiExplanation, setAiExplanation] = useState<GeminiStructuredExplanation | null>(null);
   const [systemHealth, setSystemHealth] = useState<any>(null);
+  const [modeInfo, setModeInfo] = useState<any>(null);
+  const [evolutionInfo, setEvolutionInfo] = useState<any>(null);
   
   // Drawers & Modals
   const [copilotOpen, setCopilotOpen] = useState(false);
@@ -101,8 +105,10 @@ export default function CycloneXApp() {
   const [evidenceOpen, setEvidenceOpen] = useState(false);
   const [voiceModalOpen, setVoiceModalOpen] = useState(false);
   const [dataHealthInfo, setDataHealthInfo] = useState<any>(null);
+  const [selectedState, setSelectedState] = useState('Odisha');
+  const [selectedDistrict, setSelectedDistrict] = useState('Puri');
 
-  // Initial load using resilient Promise.allSettled (Section 12)
+  // Initial load using resilient Promise.allSettled (Section 12 & 38)
   useEffect(() => {
     async function loadInitialData() {
       // 1. Load Event & Track
@@ -123,14 +129,16 @@ export default function CycloneXApp() {
       }
 
       // 2. Load Core Intelligence Datasets via Promise.allSettled
-      const [riskRes, infraRes, healthRes, ensRes, impactsRes, hazardsRes, sysHealthRes] = await Promise.allSettled([
+      const [riskRes, infraRes, healthRes, ensRes, impactsRes, hazardsRes, sysHealthRes, modeRes, evoRes] = await Promise.allSettled([
         getRiskOverview(),
         getInfrastructureRisk(),
         getDataHealth(),
         getEnsembleAggregation(),
         getAssetImpacts(),
         getHazardsOverview(),
-        getSystemHealth()
+        getSystemHealth(),
+        getMode(),
+        getForecastEvolution()
       ]);
 
       if (riskRes.status === 'fulfilled' && riskRes.value) {
@@ -156,6 +164,12 @@ export default function CycloneXApp() {
       }
       if (sysHealthRes.status === 'fulfilled' && sysHealthRes.value) {
         setSystemHealth(sysHealthRes.value);
+      }
+      if (modeRes.status === 'fulfilled' && modeRes.value) {
+        setModeInfo((modeRes.value as any)?.data || modeRes.value);
+      }
+      if (evoRes.status === 'fulfilled' && evoRes.value) {
+        setEvolutionInfo(evoRes.value?.data || evoRes.value);
       }
 
       // 3. Grounded AI initial summary
@@ -225,17 +239,21 @@ export default function CycloneXApp() {
 
   return (
     <div className="flex flex-col h-screen w-screen bg-[#080d1a] text-slate-100 overflow-hidden font-sans">
-      {/* Top Command Header (Section 43) */}
+      {/* Top Command Header (Section 39 & 43) */}
       <CommandHeader 
         onSearchCommand={handleSearchCommand}
         onOpenDataHealth={() => setDataHealthOpen(true)}
         onOpenCopilot={() => setCopilotOpen(true)}
         onOpenVoice={() => setVoiceModalOpen(true)}
         onOpenEvidence={() => setEvidenceOpen(true)}
-        isDemo={true}
-        eventTitle={event?.name || "Cyclone Alpha (Bay of Bengal)"}
-        latestRunId="RUN-18Z"
-        modelVersion="WeatherNext 3 / Cyclones v2.0"
+        isDemo={modeInfo?.is_demo ?? true}
+        eventTitle={event?.name || "DEMO-TC-2026-ALPHA (Bay of Bengal)"}
+        latestRunId={evolutionInfo?.latest_run?.run_id || "RUN-18Z"}
+        modelVersion={systemHealth?.subsystems?.weathernext_3 ? `WeatherNext 3 (${systemHealth.subsystems.weathernext_3})` : "WeatherNext 3 / Cyclones v2.0"}
+        selectedState={selectedState}
+        selectedDistrict={selectedDistrict}
+        onSelectState={(st) => setSelectedState(st)}
+        onSelectDistrict={(dt) => setSelectedDistrict(dt)}
       />
 
       {/* Main Operational Body */}
@@ -335,18 +353,22 @@ export default function CycloneXApp() {
 
               {/* Map + Right Intelligence Panel Split */}
               <div className="flex-1 flex flex-col lg:flex-row overflow-hidden relative">
-                {/* Center Geospatial Map with 12 Map Modes */}
+                {/* Center Geospatial Map with MapLibre GL JS */}
                 <div className="flex-1 h-full min-h-[350px] relative">
-                  <GoogleMapContainer 
+                  <MapContainer 
                     trackData={trackData}
                     hotspots={riskData?.top_priority_zones}
                     infrastructure={infrastructure}
                     selectedZone={selectedZone}
                     selectedInfra={selectedInfra}
-                    ensembleResult={ensembleData}
-                    assetImpacts={assetImpacts}
                     onSelectZone={(z) => setSelectedZone(z)}
                     onSelectInfrastructure={(infra) => setSelectedInfra(infra)}
+                    onSelectAssetImpact={(asset) => {
+                      if (asset) {
+                        const matchedInfra = infrastructure.find(i => i.asset_id === asset.asset_id);
+                        if (matchedInfra) setSelectedInfra(matchedInfra);
+                      }
+                    }}
                   />
                 </div>
 

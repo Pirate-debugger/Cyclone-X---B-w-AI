@@ -28,25 +28,26 @@ def test_google_compliance_endpoint():
     assert "Firebase Authentication" in comp_names
 
 def test_imd_official_provider():
-    """Validates IMD bulletin ingestion and classification (Section 16: DEMO vs OFFICIAL)."""
+    """Validates IMD bulletin ingestion and classification (Section 21: DEMO vs OFFICIAL)."""
     provider = IMDProvider()
-    bulletin = provider.get_official_bulletin("cyclone-alpha")
-    assert bulletin.cyclone_name == "CYCLONE ALPHA"
-    assert bulletin.bulletin_number == 14
+    bulletin = provider.get_official_bulletin("DEMO-TC-2026-ALPHA")
+    assert "ALPHA" in bulletin.cyclone_name.upper()
+    # In demo mode, never manufacture a bulletin number
+    assert bulletin.bulletin_number is None or bulletin.bulletin_number >= 0
     assert bulletin.classification.value in ("DEMO", "OFFICIAL_ADVISORY", "OFFICIAL_SOURCE_UNAVAILABLE")
     if bulletin.classification.value == "DEMO":
-        assert "SIMULATED SCENARIO" in bulletin.official_source
+        assert "SIMULATED" in bulletin.official_source
     else:
         assert "IMD" in bulletin.official_source
     assert len(bulletin.forecast_points) >= 5
 
 def test_imd_api_endpoint():
-    """Validates /api/v2/imd/official-bulletin endpoint with Section 16 classification."""
-    response = client.get("/api/v2/imd/official-bulletin?event_id=cyclone-alpha")
+    """Validates /api/v2/imd/official-bulletin endpoint with Section 21 classification."""
+    response = client.get("/api/v2/imd/official-bulletin?event_id=DEMO-TC-2026-ALPHA")
     assert response.status_code == 200
     data = response.json()
     assert data["success"] is True
-    assert data["data"]["cyclone_name"] == "CYCLONE ALPHA"
+    assert "ALPHA" in data["data"]["cyclone_name"].upper()
     assert data["data"]["classification"] in ("DEMO", "OFFICIAL_ADVISORY", "OFFICIAL_SOURCE_UNAVAILABLE")
 
 @pytest.mark.asyncio

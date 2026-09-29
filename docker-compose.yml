@@ -8,7 +8,7 @@ services:
     environment:
       POSTGRES_DB: cyclonex_db
       POSTGRES_USER: cyclonex
-      POSTGRES_PASSWORD: cyclonex_secret
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-cyclonex_db_secret}
     ports:
       - "5432:5432"
     volumes:
@@ -19,6 +19,19 @@ services:
       timeout: 5s
       retries: 5
 
+  valhalla:
+    image: ghcr.io/gis-ops/docker-valhalla/valhalla:latest
+    container_name: cyclonex_valhalla
+    restart: unless-stopped
+    environment:
+      - build_elevation=False
+      - build_admins=False
+      - build_time_zone=False
+    ports:
+      - "8002:8002"
+    volumes:
+      - valhalladata:/custom_files
+
   backend:
     build:
       context: .
@@ -27,7 +40,7 @@ services:
     restart: unless-stopped
     environment:
       APP_MODE: ${APP_MODE:-demo}
-      DATABASE_URL: postgresql://cyclonex:cyclonex_secret@db:5432/cyclonex_db
+      DATABASE_URL: postgresql://cyclonex:${POSTGRES_PASSWORD:-cyclonex_db_secret}@db:5432/cyclonex_db
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
       GEMINI_MODEL: ${GEMINI_MODEL:-gemini-3.8-flash}
       GOOGLE_CLOUD_PROJECT: ${GOOGLE_CLOUD_PROJECT:-}
@@ -38,6 +51,9 @@ services:
       BIGQUERY_PROJECT: ${BIGQUERY_PROJECT:-}
       BIGQUERY_DATASET: ${BIGQUERY_DATASET:-cyclonex_analytics}
       FIREBASE_PROJECT_ID: ${FIREBASE_PROJECT_ID:-}
+      MAP_PROVIDER: ${MAP_PROVIDER:-openfreemap}
+      ROUTE_PROVIDER: ${ROUTE_PROVIDER:-valhalla}
+      VALHALLA_URL: http://valhalla:8002/route
       GOOGLE_MAPS_API_KEY: ${GOOGLE_MAPS_API_KEY:-}
       GOOGLE_WEATHER_API_ENABLED: ${GOOGLE_WEATHER_API_ENABLED:-false}
     ports:
@@ -59,6 +75,8 @@ services:
     restart: unless-stopped
     environment:
       INTERNAL_BACKEND_URL: http://backend:8000
+      NEXT_PUBLIC_MAP_PROVIDER: ${NEXT_PUBLIC_MAP_PROVIDER:-openfreemap}
+      NEXT_PUBLIC_ROUTE_PROVIDER: ${NEXT_PUBLIC_ROUTE_PROVIDER:-valhalla}
       NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: ${NEXT_PUBLIC_GOOGLE_MAPS_API_KEY:-}
     ports:
       - "3000:3000"
@@ -67,3 +85,4 @@ services:
 
 volumes:
   pgdata:
+  valhalladata:

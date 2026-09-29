@@ -229,39 +229,39 @@ export function getReportDownloadUrl(reportId: string, format = 'pdf'): string {
 // V2 PROBABILISTIC DISASTER INTELLIGENCE APIs
 // ==========================================
 
-export async function getEnsembleAggregation(eventId = 'cyclone-alpha'): Promise<EnsembleAggregationResult> {
+export async function getEnsembleAggregation(eventId = 'DEMO-TC-2026-ALPHA'): Promise<EnsembleAggregationResult> {
   return fetchJson<EnsembleAggregationResult>(`/api/ensemble/aggregation?event_id=${eventId}`);
 }
 
-export async function getEnsembleMembers(eventId = 'cyclone-alpha'): Promise<ForecastMember[]> {
+export async function getEnsembleMembers(eventId = 'DEMO-TC-2026-ALPHA'): Promise<ForecastMember[]> {
   return fetchJson<ForecastMember[]>(`/api/ensemble/members?event_id=${eventId}`);
 }
 
-export async function getLandfallSectors(eventId = 'cyclone-alpha'): Promise<LandfallSectorProbability[]> {
+export async function getLandfallSectors(eventId = 'DEMO-TC-2026-ALPHA'): Promise<LandfallSectorProbability[]> {
   return fetchJson<LandfallSectorProbability[]>(`/api/ensemble/landfall-sectors?event_id=${eventId}`);
 }
 
-export async function getModelComparison(eventId = 'cyclone-alpha'): Promise<MultiModelConsensus> {
+export async function getModelComparison(eventId = 'DEMO-TC-2026-ALPHA'): Promise<MultiModelConsensus> {
   return fetchJson<MultiModelConsensus>(`/api/forecast/comparison?event_id=${eventId}`);
 }
 
-export async function getForecastEvolution(eventId = 'cyclone-alpha'): Promise<any> {
+export async function getForecastEvolution(eventId = 'DEMO-TC-2026-ALPHA'): Promise<any> {
   return fetchJson<any>(`/api/forecast/evolution?event_id=${eventId}`);
 }
 
-export async function getHazardsOverview(eventId = 'cyclone-alpha', leadHours = 48): Promise<HazardFieldsOverview> {
+export async function getHazardsOverview(eventId = 'DEMO-TC-2026-ALPHA', leadHours = 48): Promise<HazardFieldsOverview> {
   return fetchJson<HazardFieldsOverview>(`/api/hazards/overview?event_id=${eventId}&lead_hours=${leadHours}`);
 }
 
-export async function getHazardsGeoJSON(eventId = 'cyclone-alpha'): Promise<any> {
+export async function getHazardsGeoJSON(eventId = 'DEMO-TC-2026-ALPHA'): Promise<any> {
   return fetchJson<any>(`/api/hazards/geojson?event_id=${eventId}`);
 }
 
-export async function getAssetImpacts(eventId = 'cyclone-alpha'): Promise<AssetImpactProbability[]> {
+export async function getAssetImpacts(eventId = 'DEMO-TC-2026-ALPHA'): Promise<AssetImpactProbability[]> {
   return fetchJson<AssetImpactProbability[]>(`/api/impact/assets?event_id=${eventId}`);
 }
 
-export async function getCascadingNetwork(eventId = 'cyclone-alpha'): Promise<any> {
+export async function getCascadingNetwork(eventId = 'DEMO-TC-2026-ALPHA'): Promise<any> {
   return fetchJson<any>(`/api/impact/cascading-network?event_id=${eventId}`);
 }
 
@@ -269,11 +269,11 @@ export async function getBacktestMetrics(eventId = 'hist-fani-2019'): Promise<an
   return fetchJson<any>(`/api/backtesting/metrics?event_id=${eventId}`);
 }
 
-export async function getPriorityActions(eventId = 'cyclone-alpha'): Promise<PriorityActionsPayload> {
+export async function getPriorityActions(eventId = 'DEMO-TC-2026-ALPHA'): Promise<PriorityActionsPayload> {
   return fetchJson<PriorityActionsPayload>(`/api/actions/priority?event_id=${eventId}`);
 }
 
-export async function getDataQualityReport(eventId = 'cyclone-alpha'): Promise<DataQualityReport> {
+export async function getDataQualityReport(eventId = 'DEMO-TC-2026-ALPHA'): Promise<DataQualityReport> {
   return fetchJson<DataQualityReport>(`/api/data-quality/report?event_id=${eventId}`);
 }
 
@@ -281,7 +281,7 @@ export async function getFreshnessProviders(): Promise<any[]> {
   return fetchJson<any[]>('/api/freshness/providers');
 }
 
-export async function askCopilotV2(query: string, eventId = 'cyclone-alpha'): Promise<any> {
+export async function askCopilotV2(query: string, eventId = 'DEMO-TC-2026-ALPHA'): Promise<any> {
   return fetchJson<any>('/api/ai/copilot-v2', {
     method: 'POST',
     body: JSON.stringify({ query, event_id: eventId })
@@ -292,7 +292,7 @@ export async function getGoogleCompliance(): Promise<any> {
   return fetchJson<any>('/api/system/google-compliance');
 }
 
-export async function getOfficialIMDBulletin(eventId = 'cyclone-alpha'): Promise<any> {
+export async function getOfficialIMDBulletin(eventId = 'DEMO-TC-2026-ALPHA'): Promise<any> {
   return fetchJson<any>(`/api/v2/imd/official-bulletin?event_id=${eventId}`);
 }
 
@@ -329,10 +329,20 @@ export async function getBhuvanDatasets(): Promise<any> {
   return fetchJson<any>('/api/v2/bhuvan/datasets');
 }
 
-export async function sendVoiceCommand(transcript: string): Promise<any> {
+export async function sendVoiceCommand(
+  transcript: string,
+  languageCode = 'en-IN',
+  isDemo = false,
+  demoCommand?: string
+): Promise<any> {
   return fetchJson<any>('/api/v2/voice/command', {
     method: 'POST',
-    body: JSON.stringify({ transcript })
+    body: JSON.stringify({
+      transcript,
+      language_code: languageCode,
+      is_demo: isDemo,
+      demo_command: demoCommand
+    })
   });
 }
 
@@ -346,4 +356,8 @@ export async function translateAdvisory(payload: {
     method: 'POST',
     body: JSON.stringify(payload)
   });
+}
+
+export async function getMode(): Promise<{ app_mode: string; is_demo: boolean; message: string }> {
+  return fetchJson<{ app_mode: string; is_demo: boolean; message: string }>('/api/mode');
 }

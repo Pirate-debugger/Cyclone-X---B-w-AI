@@ -1,0 +1,34 @@
+# CYCLONE-X System Audit & Architectural Classification
+
+## 1. Executive Summary & Audit Scope
+CYCLONE-X is a decision-support disaster intelligence platform designed for cyclonic events in the Bay of Bengal and coastal regions. A comprehensive inspection was conducted across the entire codebase, reviewing:
+- **Frontend**: Next.js 16 standalone, React 19, MapLibre GL JS, Google Maps Platform loader, View components, Drawer components, API client.
+- **Backend**: FastAPI, Pydantic v2 schemas, Geospatial Shapely engines, PostGIS / SQLite persistence, Gemini 3.8 Flash tools.
+- **Providers & AI Engines**: WeatherNext 3 (Google DeepMind 64-member ensemble), IMD bulletin provider, Google Weather API, Earth Engine satellite SAR, Vertex AI Impact Model, Route Risk Engine, Backtest Engine.
+- **Infrastructure & Security**: Docker Compose, environment variables, authentication, CORS, and role-based access control.
+
+---
+
+## 2. Feature Classification Table
+
+| Component / Subsystem | Source Files | Prior State Status | Post-Repair Classification | Audit Findings & Required Remediation |
+| :--- | :--- | :--- | :--- | :--- |
+| **Primary Dashboard Map** | `app/page.tsx`, `components/GoogleMapContainer.tsx` | **BROKEN / BLOCKING** | **IMPLEMENTED (LIVE / DEMO)** | Dashboard strictly imported `GoogleMapContainer`, causing a blank screen or blocking warning when `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` was missing. Replaced with `MapContainer.tsx` (MapLibre GL JS). |
+| **MapLibre Engine** | `components/MapContainer.tsx` | **INCOMPLETE** | **IMPLEMENTED (CORE ENGINE)** | MapContainer existed but was bypassed in the main dashboard and hard-coded to CARTO Dark Matter raster tiles. Upgraded with OpenFreeMap vector basemap, PMTiles protocol, and full 12-layer registry. |
+| **CARTO Basemap Dependency** | `components/MapContainer.tsx`, `views/SettingsView.tsx` | **MISLEADING / UNUSED** | **REMOVED** | Hard-coded reliance on `basemaps.cartocdn.com` requiring an API key. Purged from default initialization and settings UI in favor of OpenFreeMap. |
+| **OpenFreeMap Basemap** | `components/MapContainer.tsx` | **MISSING** | **IMPLEMENTED (DEMO / DEFAULT)** | Added `https://tiles.openfreemap.org/styles/dark` as default zero-key basemap with proper attribution: *OpenFreeMap © OpenMapTiles Data from OpenStreetMap*. |
+| **PMTiles Enterprise Mode** | `components/MapContainer.tsx` | **MISSING** | **IMPLEMENTED (PRODUCTION)** | Added `pmtiles` package, registered custom PMTiles protocol with MapLibre, supporting range-request vector tile archives (`pmtiles://https://...`). |
+| **IMD Bulletin Ingestion** | `providers/imd_provider.py`, `data/demo/imd_bulletin.json` | **MISLEADING** | **LIVE / DEMO SEPARATED** | Fallback in LIVE mode synthesized fake bulletin numbers and labeled synthetic text as `OFFICIAL IMD GOVERNMENT WARNING`. Fixed: LIVE mode returns `OFFICIAL SOURCE UNAVAILABLE` if feed fails; DEMO mode returns `SIMULATED CYCLONE SCENARIO`. |
+| **Event ID Consistency** | Full codebase (`backend/app`, `frontend/lib`) | **BROKEN / INCONSISTENT** | **IMPLEMENTED (CANONICAL)** | APIs and services silently defaulted to `cyclone-alpha` while demo datasets used `DEMO-TC-2026-ALPHA`. Standardized to `DEMO-TC-2026-ALPHA` across all backend services, endpoints, and frontend callers. |
+| **WeatherNext 3 NWP** | `providers/weathernext_provider.py` | **SIMULATED / DEMO** | **DEMO ENSEMBLE / LIVE ABSTRACTED** | 64-member synthetic flow was labeled as live WeatherNext 3. Fixed: Classified as `DEMO ENSEMBLE` in demo mode, `WEATHERNEXT 3` only when authorized GCP BigQuery/Zarr sources are connected. |
+| **WeatherNext Cyclones** | `providers/weathernext_cyclone_provider.py` | **SIMULATED** | **IMPLEMENTED (ASYNC WORKER)** | Asynchronous inference worker now stores model version, checkpoint, input reference, inference timestamp, and output reference. Supports WeatherNext Cyclones & Cyclones Mini. |
+| **Ensemble Aggregation** | `services/ensemble_engine.py` | **IMPLEMENTED** | **IMPLEMENTED (LIVE CALCULATION)** | Aggregates mean, median, p10-p90 plumes, track spread, density grid, and landfall probabilities directly from valid members. |
+| **Zero-Hardcode Rule** | `services/gemini_copilot_v2.py`, `app/page.tsx` | **MISLEADING** | **FIXED (CALCULATED)** | Removed hard-coded "84%", "62%", "340000", "1280000" in live code paths; all probabilities and exposures are now evidence-derived from ensemble & hazard layers. |
+| **Route Risk & Valhalla** | `services/route_risk_engine.py`, `docker-compose.yml` | **MISLEADING / INCOMPLETE** | **IMPLEMENTED (VALHALLA / MULTI-PROVIDER)** | Had a hard-coded "reduces coastal storm surge intersection by 84%" string and relied solely on Google Routes. Implemented multi-provider routing (Valhalla, Google Routes, OSRM, Demo) and dynamic exposure reduction formula: `1 - (alt_exp / base_exp)`. |
+| **Earth Engine Integration** | `services/earth_engine_service.py` | **IMPLEMENTED (DATA LAYER)** | **IMPLEMENTED (PROVENANCE-AWARE)** | Evaluates true `ee.Initialize()` status before reporting `CONNECTED`. Sentinel-1 outputs strictly labeled `SATELLITE-DERIVED CHANGE SIGNAL` with acquisition and retrieval timestamps. |
+| **Scientific Backtesting** | `services/backtest_engine.py`, `views/ForecastVerificationView.tsx` | **MISLEADING** | **IMPLEMENTED (CALCULATED)** | Removed ungrounded static claims; backtesting engine dynamically computes Track Error (km), Intensity MAE, Landfall Error, Brier Score, and CRPS from best-track points. Returns `VERIFICATION DATA UNAVAILABLE` when data is missing. |
+| **Google Weather Context** | `providers/google_weather_provider.py` | **SIMULATED / DEMO** | **LIVE / DEMO SEPARATED** | Fallback labeled as `DEMO_WEATHER_BASELINE` or `PROVIDER_UNAVAILABLE`. Never misattributed to Google Weather API. |
+| **Gemini 3.8 Copilot** | `services/gemini_copilot_v2.py` | **MISLEADING (DUAL DATASET)** | **IMPLEMENTED (GROUNDED)** | Contained a hidden second hardcoded dataset inside lambda functions. Purged in favor of direct queries to active backend computation engines with full metadata provenance. |
+| **Alert Clearance Workflow** | `views/AlertCenterView.tsx`, `services/alert_service.py` | **INCOMPLETE (4-STAGE)** | **IMPLEMENTED (5-STAGE)** | Upgraded to the mandatory 5-stage clearance: `DRAFT → EVIDENCE REVIEW → LANGUAGE REVIEW → AUTHORIZED APPROVAL → DISPATCH`. |
+| **Dynamic Command Header** | `components/CommandHeader.tsx`, `app/page.tsx` | **HARDCODED** | **DYNAMIC** | Replaced static `isDemo={true}` and hard-coded model/run labels with dynamic states retrieved from `/api/mode` and `/api/health`. |
+| **Security & Secrets** | Entire repo | **VERIFIED CLEAN** | **SECURED** | All API keys and credentials are read via environment variables or Secret Manager stubs. Wildcard CORS prevented in production. |

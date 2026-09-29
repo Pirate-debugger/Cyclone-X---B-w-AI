@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Query, HTTPException, Body
 from typing import Dict, Any, List, Optional
 from pydantic import BaseModel
+from app.core.config import settings
 from app.services.ensemble_engine import EnsembleAggregator, LandfallProbabilityEngine
 from app.services.forecast_comparison_engine import ForecastComparisonEngine
 from app.services.hazard_field_engine import HazardFieldEngine
@@ -28,20 +29,22 @@ router = APIRouter(tags=["V2 Enterprise Disaster Intelligence"])
 
 class CopilotQueryRequest(BaseModel):
     query: str
-    event_id: Optional[str] = "cyclone-alpha"
+    event_id: Optional[str] = None
 
 # --- 1. Ensemble Intelligence ---
 @router.get("/ensemble/aggregation", response_model=Dict[str, Any])
-async def get_ensemble_aggregation(event_id: str = Query("cyclone-alpha")):
-    res = EnsembleAggregator.get_ensemble_aggregation(event_id)
+async def get_ensemble_aggregation(event_id: str = Query(None)):
+    eid = event_id or settings.DEFAULT_EVENT_ID
+    res = EnsembleAggregator.get_ensemble_aggregation(eid)
     return {
         "success": True,
         "data": res.model_dump()
     }
 
 @router.get("/ensemble/members", response_model=Dict[str, Any])
-async def get_ensemble_members(event_id: str = Query("cyclone-alpha")):
-    members = EnsembleAggregator.get_all_raw_members(event_id)
+async def get_ensemble_members(event_id: str = Query(None)):
+    eid = event_id or settings.DEFAULT_EVENT_ID
+    members = EnsembleAggregator.get_all_raw_members(eid)
     return {
         "success": True,
         "count": len(members),
@@ -49,8 +52,9 @@ async def get_ensemble_members(event_id: str = Query("cyclone-alpha")):
     }
 
 @router.get("/ensemble/landfall-sectors", response_model=Dict[str, Any])
-async def get_landfall_sectors(event_id: str = Query("cyclone-alpha")):
-    sectors = LandfallProbabilityEngine.calculate_sector_landfall_probabilities(event_id)
+async def get_landfall_sectors(event_id: str = Query(None)):
+    eid = event_id or settings.DEFAULT_EVENT_ID
+    sectors = LandfallProbabilityEngine.calculate_sector_landfall_probabilities(eid)
     return {
         "success": True,
         "data": [s.model_dump() for s in sectors]
@@ -58,16 +62,18 @@ async def get_landfall_sectors(event_id: str = Query("cyclone-alpha")):
 
 # --- 2. Model Comparison & Run Evolution ---
 @router.get("/forecast/comparison", response_model=Dict[str, Any])
-async def get_model_comparison(event_id: str = Query("cyclone-alpha")):
-    consensus = ForecastComparisonEngine.get_multi_model_consensus(event_id)
+async def get_model_comparison(event_id: str = Query(None)):
+    eid = event_id or settings.DEFAULT_EVENT_ID
+    consensus = ForecastComparisonEngine.get_multi_model_consensus(eid)
     return {
         "success": True,
         "data": consensus.model_dump()
     }
 
 @router.get("/forecast/evolution", response_model=Dict[str, Any])
-async def get_forecast_evolution(event_id: str = Query("cyclone-alpha")):
-    evo = ForecastComparisonEngine.get_forecast_evolution(event_id)
+async def get_forecast_evolution(event_id: str = Query(None)):
+    eid = event_id or settings.DEFAULT_EVENT_ID
+    evo = ForecastComparisonEngine.get_forecast_evolution(eid)
     return {
         "success": True,
         "data": evo
@@ -75,16 +81,18 @@ async def get_forecast_evolution(event_id: str = Query("cyclone-alpha")):
 
 # --- 3. Gridded Spatial Hazard Fields ---
 @router.get("/hazards/overview", response_model=Dict[str, Any])
-async def get_hazards_overview(event_id: str = Query("cyclone-alpha"), lead_hours: int = Query(48)):
-    overview = HazardFieldEngine.get_hazard_overview(event_id, lead_hours=lead_hours)
+async def get_hazards_overview(event_id: str = Query(None), lead_hours: int = Query(48)):
+    eid = event_id or settings.DEFAULT_EVENT_ID
+    overview = HazardFieldEngine.get_hazard_overview(eid, lead_hours=lead_hours)
     return {
         "success": True,
         "data": overview.model_dump()
     }
 
 @router.get("/hazards/geojson", response_model=Dict[str, Any])
-async def get_hazards_geojson(event_id: str = Query("cyclone-alpha")):
-    geojson = HazardFieldEngine.get_spatial_hazard_geojson(event_id)
+async def get_hazards_geojson(event_id: str = Query(None)):
+    eid = event_id or settings.DEFAULT_EVENT_ID
+    geojson = HazardFieldEngine.get_spatial_hazard_geojson(eid)
     return {
         "success": True,
         "data": geojson
@@ -92,8 +100,9 @@ async def get_hazards_geojson(event_id: str = Query("cyclone-alpha")):
 
 # --- 4. Asset Impact Probabilities & Cascading Network ---
 @router.get("/impact/assets", response_model=Dict[str, Any])
-async def get_asset_impacts(event_id: str = Query("cyclone-alpha")):
-    assets = ImpactProbabilityEngine.get_critical_assets_impact(event_id)
+async def get_asset_impacts(event_id: str = Query(None)):
+    eid = event_id or settings.DEFAULT_EVENT_ID
+    assets = ImpactProbabilityEngine.get_critical_assets_impact(eid)
     return {
         "success": True,
         "count": len(assets),
@@ -101,8 +110,9 @@ async def get_asset_impacts(event_id: str = Query("cyclone-alpha")):
     }
 
 @router.get("/impact/cascading-network", response_model=Dict[str, Any])
-async def get_cascading_network(event_id: str = Query("cyclone-alpha")):
-    network = ImpactProbabilityEngine.get_cascading_network_graph(event_id)
+async def get_cascading_network(event_id: str = Query(None)):
+    eid = event_id or settings.DEFAULT_EVENT_ID
+    network = ImpactProbabilityEngine.get_cascading_network_graph(eid)
     return {
         "success": True,
         "data": network
@@ -119,8 +129,9 @@ async def get_backtesting_metrics(event_id: str = Query("hist-fani-2019")):
 
 # --- 6. Early Response Action Prioritization ---
 @router.get("/actions/priority", response_model=Dict[str, Any])
-async def get_priority_actions(event_id: str = Query("cyclone-alpha")):
-    actions = ActionPrioritizationEngine.get_priority_actions(event_id)
+async def get_priority_actions(event_id: str = Query(None)):
+    eid = event_id or settings.DEFAULT_EVENT_ID
+    actions = ActionPrioritizationEngine.get_priority_actions(eid)
     return {
         "success": True,
         "data": actions
@@ -128,8 +139,9 @@ async def get_priority_actions(event_id: str = Query("cyclone-alpha")):
 
 # --- 7. Data Quality & Dynamic Freshness ---
 @router.get("/data-quality/report", response_model=Dict[str, Any])
-async def get_data_quality_report(event_id: str = Query("cyclone-alpha")):
-    report = DataQualityEngine.evaluate_pipeline_quality(event_id)
+async def get_data_quality_report(event_id: str = Query(None)):
+    eid = event_id or settings.DEFAULT_EVENT_ID
+    report = DataQualityEngine.evaluate_pipeline_quality(eid)
     return {
         "success": True,
         "data": report.model_dump()
@@ -147,7 +159,7 @@ async def get_freshness_providers():
 # --- 8. AI Copilot V2 with Evidence Grounding ---
 @router.post("/ai/copilot-v2", response_model=Dict[str, Any])
 async def process_copilot_v2_query(payload: CopilotQueryRequest):
-    result = GeminiCopilotV2.process_query(payload.query, event_id=payload.event_id or "cyclone-alpha")
+    result = GeminiCopilotV2.process_query(payload.query, event_id=payload.event_id or settings.DEFAULT_EVENT_ID)
     return {
         "success": True,
         "data": result
@@ -155,8 +167,9 @@ async def process_copilot_v2_query(payload: CopilotQueryRequest):
 
 # --- 9. Official IMD Cyclone Bulletin Ingestion (Section 12) ---
 @router.get("/imd/official-bulletin", response_model=Dict[str, Any])
-async def get_official_imd_bulletin(event_id: str = Query("cyclone-alpha")):
-    bulletin = IMDProvider().get_official_bulletin(event_id)
+async def get_official_imd_bulletin(event_id: str = Query(None)):
+    eid = event_id or settings.DEFAULT_EVENT_ID
+    bulletin = IMDProvider().get_official_bulletin(eid)
     return {
         "success": True,
         "data": bulletin.model_dump()
@@ -236,17 +249,25 @@ async def get_bhuvan_datasets():
         "data": bp.get_datasets()
     }
 
-# --- 14. Voice Command Center (Sections 24 & 64) ---
+# --- 14. Voice Command Center (Sections 33 & 34) ---
 class VoiceCommandRequest(BaseModel):
-    transcript: str
+    transcript: Optional[str] = None
+    language_code: str = "en-IN"
+    is_demo: bool = False
+    demo_command: Optional[str] = None
 
 @router.post("/voice/command", response_model=Dict[str, Any])
 async def process_voice_command(payload: VoiceCommandRequest):
     from app.services.voice_service import VoiceCommandService
     vs = VoiceCommandService()
-    res = await vs.handle_voice_query(transcript=payload.transcript)
+    res = await vs.handle_voice_query(
+        transcript=payload.transcript,
+        language_code=payload.language_code,
+        is_demo=payload.is_demo,
+        demo_command=payload.demo_command
+    )
     return {
-        "success": True,
+        "success": res.get("success", True) if isinstance(res, dict) else True,
         "data": res
     }
 
@@ -288,7 +309,7 @@ async def classify_satellite_image(payload: SatelliteVisionRequest):
 
 # --- 17. WeatherNext Cyclones Neural Inference Worker (Section 14) ---
 class CycloneInferenceRequest(BaseModel):
-    event_id: str = "cyclone-alpha"
+    event_id: str = "DEMO-TC-2026-ALPHA"
     lead_hours: int = 72
     perturbation_spread: float = 1.0
 

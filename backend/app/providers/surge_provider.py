@@ -20,7 +20,7 @@ class INCOISProvider(StormSurgeProvider):
     def is_configured(self) -> bool:
         return self.enabled and self.bulletin_data is not None
 
-    async def get_surge_snapshot(self, event_id: str = "cyclone-alpha") -> Dict[str, Any]:
+    async def get_surge_snapshot(self, event_id: str = "DEMO-TC-2026-ALPHA") -> Dict[str, Any]:
         if not self.is_configured():
             return {
                 "event_id": event_id,

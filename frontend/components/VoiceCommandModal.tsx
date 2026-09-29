@@ -8,7 +8,10 @@ import {
   X, 
   ArrowRight, 
   Radio, 
-  CheckCircle2 
+  CheckCircle2,
+  Globe2,
+  AlertCircle,
+  Play
 } from 'lucide-react';
 import { sendVoiceCommand } from '../lib/api';
 import { NavTab } from './NavigationSidebar';
@@ -19,13 +22,26 @@ interface VoiceCommandModalProps {
   onNavigateTab?: (tab: NavTab) => void;
 }
 
+const INDIAN_LANGUAGES = [
+  { code: 'en-IN', name: 'English (India)' },
+  { code: 'hi-IN', name: 'Hindi (हिंदी)' },
+  { code: 'bn-IN', name: 'Bengali (বাংলা)' },
+  { code: 'te-IN', name: 'Telugu (తెలుగు)' },
+  { code: 'ta-IN', name: 'Tamil (தமிழ்)' },
+  { code: 'or-IN', name: 'Odia (ଓଡ଼ିଆ)' },
+  { code: 'gu-IN', name: 'Gujarati (ગુજરાતી)' },
+  { code: 'kn-IN', name: 'Kannada (ಕನ್ನಡ)' },
+];
+
 export const VoiceCommandModal: React.FC<VoiceCommandModalProps> = ({
   isOpen,
   onClose,
   onNavigateTab
 }) => {
+  const [selectedLang, setSelectedLang] = useState('en-IN');
   const [isListening, setIsListening] = useState(false);
   const [transcript, setTranscript] = useState('');
+  const [speechNotice, setSpeechNotice] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [response, setResponse] = useState<any | null>(null);
   const [ttsPlaying, setTtsPlaying] = useState(false);
@@ -40,26 +56,27 @@ export const VoiceCommandModal: React.FC<VoiceCommandModalProps> = ({
     { text: "Generate incident briefing for State Disaster Management Authority.", tab: 'reports' as NavTab }
   ];
 
-  const handleExecuteVoice = async (cmdText: string, suggestedTab?: NavTab) => {
+  const handleExecuteVoice = async (cmdText: string, suggestedTab?: NavTab, isDemo = false) => {
     setTranscript(cmdText);
     setLoading(true);
     setResponse(null);
+    setSpeechNotice(null);
     try {
-      const result = await sendVoiceCommand(cmdText);
-      setResponse(result);
+      const result = await sendVoiceCommand(cmdText, selectedLang, isDemo, isDemo ? cmdText : undefined);
+      const data = result?.data || result;
+      setResponse(data);
 
-      // Play Text-to-Speech
-      playTtsAudio(result.explanation || result.status);
-
-      if (suggestedTab && onNavigateTab) {
-        // Optional quick auto-navigation or manual click
+      // Play Text-to-Speech if text returned
+      const textToSpeak = data?.speech_text || data?.explanation || data?.text;
+      if (textToSpeak) {
+        playTtsAudio(textToSpeak, selectedLang);
       }
     } catch (err: any) {
       console.error(err);
       setResponse({
         transcript: cmdText,
         intent: "voice_error",
-        explanation: "Voice command processing failed or backend was unreachable. " + (err.message || ''),
+        explanation: "Voice command processing failed or backend was unreachable: " + (err.message || ''),
         status: "FAILED"
       });
     } finally {
@@ -68,10 +85,11 @@ export const VoiceCommandModal: React.FC<VoiceCommandModalProps> = ({
     }
   };
 
-  const playTtsAudio = (text: string) => {
+  const playTtsAudio = (text: string, lang = 'en-IN') => {
     if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
       window.speechSynthesis.cancel();
       const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = lang;
       utterance.rate = 1.0;
       utterance.pitch = 1.0;
       utterance.onstart = () => setTtsPlaying(true);
@@ -86,17 +104,14 @@ export const VoiceCommandModal: React.FC<VoiceCommandModalProps> = ({
 
     const SpeechRec = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!SpeechRec) {
-      // Fallback: pick first sample or prompt user
-      setIsListening(true);
-      setTimeout(() => {
-        handleExecuteVoice(sampleCommands[0].text, sampleCommands[0].tab);
-      }, 1200);
+      setSpeechNotice("Browser SpeechRecognition API is not available in this environment. Use text input or click 'TRY DEMO VOICE COMMAND'.");
       return;
     }
 
     try {
+      setSpeechNotice(null);
       const recognition = new SpeechRec();
-      recognition.lang = 'en-US';
+      recognition.lang = selectedLang;
       recognition.interimResults = false;
       recognition.maxAlternatives = 1;
 
@@ -107,12 +122,13 @@ export const VoiceCommandModal: React.FC<VoiceCommandModalProps> = ({
       recognition.onresult = (event: any) => {
         const spoken = event.results[0][0].transcript;
         setTranscript(spoken);
-        handleExecuteVoice(spoken);
+        handleExecuteVoice(spoken, undefined, false);
       };
 
       recognition.onerror = (e: any) => {
         console.warn('Speech recognition error:', e);
         setIsListening(false);
+        setSpeechNotice(`Microphone recognition message: ${e?.error || 'No speech detected or permission required.'}`);
       };
 
       recognition.onend = () => {
@@ -120,9 +136,10 @@ export const VoiceCommandModal: React.FC<VoiceCommandModalProps> = ({
       };
 
       recognition.start();
-    } catch (err) {
+    } catch (err: any) {
       console.warn('Could not start Web Speech:', err);
       setIsListening(false);
+      setSpeechNotice(`Speech recognition failed to initialize: ${err?.message || 'Permission denied.'}`);
     }
   };
 
@@ -143,7 +160,7 @@ export const VoiceCommandModal: React.FC<VoiceCommandModalProps> = ({
                 </span>
               </div>
               <p className="text-[11px] text-slate-400 font-mono">
-                Google Cloud Speech-to-Text & Text-to-Speech Grounded Operator Flow
+                Google Cloud Speech-to-Text & Text-to-Speech Multilingual Command Pipeline
               </p>
             </div>
           </div>
@@ -157,6 +174,25 @@ export const VoiceCommandModal: React.FC<VoiceCommandModalProps> = ({
 
         {/* Body Area */}
         <div className="p-5 overflow-y-auto space-y-5 flex-1">
+          {/* User-Controlled Language Selector (Section 33) */}
+          <div className="flex items-center justify-between bg-[#0b1329] border border-[#1e293b] p-3 rounded-lg text-xs">
+            <div className="flex items-center gap-2 text-slate-300">
+              <Globe2 className="w-4 h-4 text-cyan-400" />
+              <span className="font-mono font-bold">INPUT LOCALE / SPEECH LANGUAGE:</span>
+            </div>
+            <select
+              value={selectedLang}
+              onChange={(e) => setSelectedLang(e.target.value)}
+              className="bg-[#050914] border border-[#334155] text-cyan-300 rounded px-2.5 py-1 text-xs font-mono focus:outline-none focus:border-cyan-500 cursor-pointer"
+            >
+              {INDIAN_LANGUAGES.map((lang) => (
+                <option key={lang.code} value={lang.code}>
+                  {lang.name} ({lang.code})
+                </option>
+              ))}
+            </select>
+          </div>
+
           {/* Voice Input Waveform / Trigger Area */}
           <div className="bg-[#0b1329] border border-[#1e293b] rounded-xl p-6 text-center space-y-4">
             <div className="flex items-center justify-center">
@@ -179,18 +215,38 @@ export const VoiceCommandModal: React.FC<VoiceCommandModalProps> = ({
 
             <div>
               <h4 className="font-bold text-slate-100 text-sm">
-                {isListening ? "Listening to Operator Audio..." : "Click to Speak or Select a Command"}
+                {isListening ? `Listening in ${INDIAN_LANGUAGES.find(l => l.code === selectedLang)?.name}...` : "Click Mic to Speak in Selected Language"}
               </h4>
               <p className="text-slate-400 text-xs mt-1">
-                {transcript ? `"${transcript}"` : "Commands are parsed deterministically by Gemini into backend geospatial queries."}
+                {transcript ? `"${transcript}"` : "Speaks directly to Gemini Copilot; executes backend deterministic tools."}
               </p>
             </div>
 
-            {/* Manual text trigger if microphone not allowed */}
-            <div className="flex items-center gap-2 max-w-md mx-auto">
+            {/* Explicit Notice if Speech Recognition was rejected or unavailable */}
+            {speechNotice && (
+              <div className="bg-amber-950/60 border border-amber-600/40 text-amber-200 text-xs p-2.5 rounded-lg flex items-center gap-2 max-w-md mx-auto text-left">
+                <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />
+                <span className="text-[11px]">{speechNotice}</span>
+              </div>
+            )}
+
+            {/* Explicit TRY DEMO VOICE COMMAND Button (Section 33) */}
+            <div className="pt-1 flex items-center justify-center gap-3">
+              <button
+                onClick={() => handleExecuteVoice("Show severe-risk hospitals in Vizag.", undefined, true)}
+                disabled={loading}
+                className="bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-slate-950 font-bold text-xs px-4 py-2 rounded-lg shadow-lg flex items-center gap-2 font-mono uppercase tracking-wide transition-all"
+              >
+                <Play className="w-3.5 h-3.5 fill-current" />
+                <span>TRY DEMO VOICE COMMAND</span>
+              </button>
+            </div>
+
+            {/* Manual text trigger */}
+            <div className="flex items-center gap-2 max-w-md mx-auto pt-2">
               <input 
                 type="text"
-                placeholder="Or type voice simulation..."
+                placeholder="Or type operational command..."
                 value={transcript}
                 onChange={(e) => setTranscript(e.target.value)}
                 onKeyDown={(e) => {
@@ -198,12 +254,12 @@ export const VoiceCommandModal: React.FC<VoiceCommandModalProps> = ({
                     handleExecuteVoice(transcript.trim());
                   }
                 }}
-                className="flex-1 bg-[#050914] border border-[#1e293b] rounded-lg px-3 py-1.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-500"
+                className="flex-1 bg-[#050914] border border-[#1e293b] rounded-lg px-3 py-1.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-500 font-mono"
               />
               <button
                 onClick={() => transcript.trim() && handleExecuteVoice(transcript.trim())}
                 disabled={loading || !transcript.trim()}
-                className="bg-cyan-600 hover:bg-cyan-500 disabled:opacity-50 text-white text-xs font-bold px-3 py-1.5 rounded-lg"
+                className="bg-cyan-600 hover:bg-cyan-500 disabled:opacity-50 text-white text-xs font-bold px-3 py-1.5 rounded-lg font-mono"
               >
                 Run
               </button>
@@ -219,7 +275,7 @@ export const VoiceCommandModal: React.FC<VoiceCommandModalProps> = ({
               {sampleCommands.map((cmd, idx) => (
                 <button
                   key={idx}
-                  onClick={() => handleExecuteVoice(cmd.text, cmd.tab)}
+                  onClick={() => handleExecuteVoice(cmd.text, cmd.tab, true)}
                   disabled={loading}
                   className="p-2.5 rounded-lg bg-[#0f172a] hover:bg-[#1e293b] border border-[#1e293b] hover:border-cyan-700/60 text-left transition-all group flex items-start gap-2"
                 >
@@ -229,7 +285,7 @@ export const VoiceCommandModal: React.FC<VoiceCommandModalProps> = ({
                       &quot;{cmd.text}&quot;
                     </p>
                     <span className="text-[10px] text-slate-500 font-mono">
-                      Navigates to: {cmd.tab}
+                      Target: {cmd.tab}
                     </span>
                   </div>
                 </button>
@@ -242,7 +298,7 @@ export const VoiceCommandModal: React.FC<VoiceCommandModalProps> = ({
             <div className="bg-[#0f172a] border border-[#1e293b] rounded-xl p-6 text-center space-y-3 animate-pulse">
               <div className="w-6 h-6 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin mx-auto"></div>
               <p className="text-xs font-mono text-cyan-400">
-                Transcribing audio → Routing Gemini Tool → Synthesizing Explanation...
+                Processing Audio [{selectedLang}] → Routing Gemini Tool → Synthesizing Response...
               </p>
             </div>
           )}
@@ -258,7 +314,7 @@ export const VoiceCommandModal: React.FC<VoiceCommandModalProps> = ({
                 </div>
                 <div className="flex items-center gap-2">
                   <button
-                    onClick={() => playTtsAudio(response.explanation || '')}
+                    onClick={() => playTtsAudio(response.speech_text || response.explanation || '', selectedLang)}
                     className="flex items-center gap-1 text-[11px] font-mono text-cyan-400 hover:text-cyan-300 bg-cyan-950/80 px-2 py-0.5 rounded border border-cyan-800"
                   >
                     <Volume2 className="w-3.5 h-3.5" />
@@ -269,9 +325,17 @@ export const VoiceCommandModal: React.FC<VoiceCommandModalProps> = ({
 
               <div className="p-3 bg-[#080d1a] border border-[#1e293b] rounded-lg">
                 <p className="text-xs text-slate-200 leading-relaxed font-sans">
-                  {response.explanation}
+                  {response.speech_text || response.explanation}
                 </p>
               </div>
+
+              {response.voice_metadata && (
+                <div className="p-2 bg-[#050914] rounded border border-[#1e293b] text-[10px] font-mono text-slate-400 flex flex-wrap gap-x-4 gap-y-1">
+                  <span>INPUT: <strong className="text-slate-200">{response.voice_metadata.input_source}</strong></span>
+                  <span>LANG: <strong className="text-slate-200">{response.voice_metadata.language_name}</strong></span>
+                  <span>TTS: <strong className="text-slate-200">{response.voice_metadata.tts_provider}</strong></span>
+                </div>
+              )}
 
               {response.evidence && (
                 <div className="text-[11px] font-mono text-slate-400 space-y-1">

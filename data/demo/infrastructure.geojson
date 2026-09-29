@@ -331,15 +331,292 @@
         "criticality": 75,
         "capacity": 250,
         "administrative_area": "Bhubaneswar, Odisha",
+        "state": "Odisha",
+        "district": "Khordha",
+        "city": "Bhubaneswar",
         "elevation_m": 42.0,
         "distance_to_coast_km": 52.0,
+        "backup_power": true,
+        "road_access": true,
+        "population_served": 50000,
         "source": "Demo Public Administration Directory",
         "data_classification": "DEMO DATA",
+        "data_quality": "HIGH",
         "last_verified": "2026-09-25"
       },
       "geometry": {
         "type": "Point",
         "coordinates": [85.832, 20.288]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "INFRA-WB-HOSP-01",
+        "name": "Diamond Harbour Super Specialty Hospital",
+        "type": "hospital",
+        "criticality": 96,
+        "capacity": 600,
+        "administrative_area": "South 24 Parganas, West Bengal",
+        "state": "West Bengal",
+        "district": "South 24 Parganas",
+        "city": "Diamond Harbour",
+        "elevation_m": 5.2,
+        "distance_to_coast_km": 8.5,
+        "backup_power": true,
+        "road_access": true,
+        "population_served": 450000,
+        "source": "West Bengal Health Department",
+        "data_classification": "DEMO DATA",
+        "data_quality": "HIGH",
+        "last_verified": "2026-09-21"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [88.192, 22.188]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "INFRA-WB-PORT-01",
+        "name": "Haldia Port & Bulk Oil Logistics Hub",
+        "type": "port",
+        "criticality": 94,
+        "capacity": 1500,
+        "administrative_area": "Purba Medinipur, West Bengal",
+        "state": "West Bengal",
+        "district": "Purba Medinipur",
+        "city": "Haldia",
+        "elevation_m": 4.1,
+        "distance_to_coast_km": 1.5,
+        "backup_power": true,
+        "road_access": true,
+        "population_served": 200000,
+        "source": "Syama Prasad Mookerjee Port Authority",
+        "data_classification": "DEMO DATA",
+        "data_quality": "HIGH",
+        "last_verified": "2026-09-22"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [88.082, 22.023]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "INFRA-WB-SHEL-01",
+        "name": "Digha Multipurpose Cyclone Shelter Complex",
+        "type": "shelter",
+        "criticality": 92,
+        "capacity": 3000,
+        "administrative_area": "Purba Medinipur, West Bengal",
+        "state": "West Bengal",
+        "district": "Purba Medinipur",
+        "city": "Digha",
+        "elevation_m": 6.8,
+        "distance_to_coast_km": 0.8,
+        "backup_power": true,
+        "road_access": true,
+        "population_served": 15000,
+        "source": "West Bengal Disaster Management Department",
+        "data_classification": "DEMO DATA",
+        "data_quality": "HIGH",
+        "last_verified": "2026-09-20"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [87.512, 21.626]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "INFRA-WB-POW-01",
+        "name": "Kolaghat Thermal Power Generating Station",
+        "type": "power",
+        "criticality": 95,
+        "capacity": 1260,
+        "administrative_area": "Purba Medinipur, West Bengal",
+        "state": "West Bengal",
+        "district": "Purba Medinipur",
+        "city": "Kolaghat",
+        "elevation_m": 8.0,
+        "distance_to_coast_km": 45.0,
+        "backup_power": true,
+        "road_access": true,
+        "population_served": 4000000,
+        "source": "WBPDCL Power Infrastructure Directory",
+        "data_classification": "DEMO DATA",
+        "data_quality": "HIGH",
+        "last_verified": "2026-09-18"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [87.872, 22.423]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "INFRA-AP-PORT-01",
+        "name": "Visakhapatnam Major Port & Outer Deepwater Basin",
+        "type": "port",
+        "criticality": 98,
+        "capacity": 2500,
+        "administrative_area": "Visakhapatnam, Andhra Pradesh",
+        "state": "Andhra Pradesh",
+        "district": "Visakhapatnam",
+        "city": "Visakhapatnam",
+        "elevation_m": 3.8,
+        "distance_to_coast_km": 0.5,
+        "backup_power": true,
+        "road_access": true,
+        "population_served": 600000,
+        "source": "Visakhapatnam Port Authority",
+        "data_classification": "DEMO DATA",
+        "data_quality": "HIGH",
+        "last_verified": "2026-09-24"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [83.298, 17.698]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "INFRA-AP-HOSP-01",
+        "name": "King George Hospital Regional Emergency Centre",
+        "type": "hospital",
+        "criticality": 97,
+        "capacity": 1200,
+        "administrative_area": "Visakhapatnam, Andhra Pradesh",
+        "state": "Andhra Pradesh",
+        "district": "Visakhapatnam",
+        "city": "Visakhapatnam",
+        "elevation_m": 12.5,
+        "distance_to_coast_km": 1.8,
+        "backup_power": true,
+        "road_access": true,
+        "population_served": 1500000,
+        "source": "Andhra Pradesh Directorate of Medical Education",
+        "data_classification": "DEMO DATA",
+        "data_quality": "HIGH",
+        "last_verified": "2026-09-23"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [83.305, 17.708]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "INFRA-AP-SHEL-01",
+        "name": "Machilipatnam Coastal Cyclone Shelter Hub",
+        "type": "shelter",
+        "criticality": 90,
+        "capacity": 2500,
+        "administrative_area": "Krishna, Andhra Pradesh",
+        "state": "Andhra Pradesh",
+        "district": "Krishna",
+        "city": "Machilipatnam",
+        "elevation_m": 4.0,
+        "distance_to_coast_km": 2.2,
+        "backup_power": true,
+        "road_access": true,
+        "population_served": 20000,
+        "source": "Andhra Pradesh State Disaster Management Authority",
+        "data_classification": "DEMO DATA",
+        "data_quality": "HIGH",
+        "last_verified": "2026-09-22"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [81.139, 16.188]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "INFRA-TN-PORT-01",
+        "name": "Chennai Port Trust & Harbor Terminal",
+        "type": "port",
+        "criticality": 96,
+        "capacity": 3000,
+        "administrative_area": "Chennai, Tamil Nadu",
+        "state": "Tamil Nadu",
+        "district": "Chennai",
+        "city": "Chennai",
+        "elevation_m": 3.2,
+        "distance_to_coast_km": 0.4,
+        "backup_power": true,
+        "road_access": true,
+        "population_served": 2500000,
+        "source": "Chennai Port Authority",
+        "data_classification": "DEMO DATA",
+        "data_quality": "HIGH",
+        "last_verified": "2026-09-23"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [80.298, 13.084]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "INFRA-TN-HOSP-01",
+        "name": "Rajiv Gandhi Government General Hospital",
+        "type": "hospital",
+        "criticality": 98,
+        "capacity": 1750,
+        "administrative_area": "Chennai, Tamil Nadu",
+        "state": "Tamil Nadu",
+        "district": "Chennai",
+        "city": "Chennai",
+        "elevation_m": 7.5,
+        "distance_to_coast_km": 2.0,
+        "backup_power": true,
+        "road_access": true,
+        "population_served": 3000000,
+        "source": "Tamil Nadu Health System Project",
+        "data_classification": "DEMO DATA",
+        "data_quality": "HIGH",
+        "last_verified": "2026-09-24"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [80.278, 13.081]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "INFRA-GJ-PORT-01",
+        "name": "Deendayal Port Kandla Maritime Complex",
+        "type": "port",
+        "criticality": 97,
+        "capacity": 4000,
+        "administrative_area": "Kutch, Gujarat",
+        "state": "Gujarat",
+        "district": "Kutch",
+        "city": "Kandla",
+        "elevation_m": 4.5,
+        "distance_to_coast_km": 1.0,
+        "backup_power": true,
+        "road_access": true,
+        "population_served": 800000,
+        "source": "Deendayal Port Authority",
+        "data_classification": "DEMO DATA",
+        "data_quality": "HIGH",
+        "last_verified": "2026-09-20"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [70.219, 23.003]
       }
     }
   ]

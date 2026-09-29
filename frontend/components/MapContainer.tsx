@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useMemo } from 'react';
 import * as maplibregl from 'maplibre-gl';
+import { Protocol } from 'pmtiles';
 import { 
   Layers, 
   RotateCcw, 
@@ -19,7 +20,10 @@ import {
   Satellite,
   Globe,
   CheckCircle2,
-  AlertTriangle
+  AlertTriangle,
+  Radio,
+  Navigation,
+  Users
 } from 'lucide-react';
 import { 
   TrackCollection, 
@@ -29,26 +33,48 @@ import {
   ForecastMember,
   AssetImpactProbability
 } from '../lib/types';
-import { getEnsembleAggregation, getEnsembleMembers, getHazardsGeoJSON, getAssetImpacts } from '../lib/api';
+import { 
+  getEnsembleAggregation, 
+  getEnsembleMembers, 
+  getHazardsGeoJSON, 
+  getAssetImpacts,
+  getRouteRisk
+} from '../lib/api';
 
+// Register maplibre worker if available
 if (typeof window !== 'undefined' && typeof (maplibregl as any).setWorkerUrl === 'function') {
   (maplibregl as any).setWorkerUrl('/maplibre-gl-worker.mjs');
 }
 
-export const CARTO_DEFAULT_KEY = '';
-
-export function getResolvedCartoKey(): string {
-  if (typeof window !== 'undefined') {
-    const stored = localStorage.getItem('cyclonex_carto_api_key');
-    if (stored && stored.trim()) return stored.trim();
+// Register PMTiles Protocol for MapLibre
+let pmtilesInitialized = false;
+function registerPMTilesProtocol() {
+  if (typeof window !== 'undefined' && !pmtilesInitialized) {
+    try {
+      const protocol = new Protocol();
+      maplibregl.addProtocol('pmtiles', protocol.tile);
+      pmtilesInitialized = true;
+    } catch (e) {
+      console.warn('PMTiles protocol registration note:', e);
+    }
   }
-  return (
-    process.env.NEXT_PUBLIC_CARTO_API_KEY ||
-    process.env.NEXT_PUBLIC_MAP_KEY ||
-    process.env.NEXT_PUBLIC_MAP_API_KEY ||
-    CARTO_DEFAULT_KEY
-  );
 }
+
+// 12-Layer Registry Definition (Section 7 & 8)
+export interface MapLayerDefinition {
+  id: string;
+  label: string;
+  source: string;
+  classification: 'OFFICIAL' | 'OBSERVATION' | 'FORECAST' | 'ENSEMBLE' | 'MODEL_OUTPUT' | 'SCENARIO' | 'DEMO' | 'SATELLITE';
+  visibility: boolean;
+  opacity: number;
+  renderer: 'vector' | 'geojson' | 'raster';
+  timestamp: string;
+  resolution: string;
+  status: 'ACTIVE' | 'STANDBY' | 'UNAVAILABLE';
+}
+
+export type LayerRegistryEntry = MapLayerDefinition;
 
 export type MapMode = 
   | 'TRACK'
@@ -60,7 +86,8 @@ export type MapMode =
   | 'INFRASTRUCTURE'
   | 'POPULATION'
   | 'SATELLITE'
-  | 'FORECAST CHANGE';
+  | 'FORECAST CHANGE'
+  | 'ROUTE RISK';
 
 interface MapContainerProps {
   trackData?: TrackCollection | null;
@@ -72,6 +99,23 @@ interface MapContainerProps {
   onSelectInfrastructure?: (infra: InfrastructureRiskAssessment | null) => void;
   onSelectAssetImpact?: (asset: AssetImpactProbability | null) => void;
 }
+
+// Basemap URL Constants (Section 2, 5 & 6)
+const DEFAULT_MAP_STYLE_URL = process.env.NEXT_PUBLIC_MAP_STYLE_URL || 'https://tiles.openfreemap.org/styles/liberty';
+const OPENFREEMAP_ATTRIBUTION = '© OpenFreeMap | © OpenMapTiles | Data from OpenStreetMap';
+const LOCAL_OFFLINE_STYLE: maplibregl.StyleSpecification = {
+  version: 8,
+  sources: {},
+  layers: [
+    {
+      id: 'offline-background',
+      type: 'background',
+      paint: {
+        'background-color': '#080d1a'
+      }
+    }
+  ]
+};
 
 export const MapContainer: React.FC<MapContainerProps> = ({
   trackData,
@@ -86,125 +130,91 @@ export const MapContainer: React.FC<MapContainerProps> = ({
   const mapContainer = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
-  
-  // 10 Enterprise Map Modes (Section 45)
+  const [basemapError, setBasemapError] = useState(false);
+  const [isOfflineMode, setIsOfflineMode] = useState(false);
   const [activeMode, setActiveMode] = useState<MapMode>('ENSEMBLE');
-  
-  // Dynamic V2 Data
+
+  // Dynamic Layer Registry State (Section 8)
+  const [layerVisibility, setLayerVisibility] = useState<Record<string, boolean>>({
+    'OFFICIAL TRACK': true,
+    'ENSEMBLE TRACK': true,
+    'TRACK DENSITY': true,
+    'WIND PROBABILITY': true,
+    'RAINFALL PROBABILITY': true,
+    'FLOOD/INUNDATION': true,
+    'IMPACT PROBABILITY': true,
+    'INFRASTRUCTURE': true,
+    'POPULATION': false,
+    'SATELLITE': false,
+    'FORECAST CHANGE': false,
+    'ROUTE RISK': false
+  });
+
+  // Dynamic V2 Geospatial Data
   const [ensembleData, setEnsembleData] = useState<EnsembleAggregationResult | null>(null);
   const [rawMembers, setRawMembers] = useState<ForecastMember[]>([]);
   const [hazardsGeoJSON, setHazardsGeoJSON] = useState<any>(null);
   const [assetImpacts, setAssetImpacts] = useState<AssetImpactProbability[]>([]);
-  const [showDensityGrid, setShowDensityGrid] = useState(true);
-  const [tileKeyActive, setTileKeyActive] = useState(true);
+  const [routeRiskData, setRouteRiskData] = useState<any>(null);
 
-  // Fetch V2 Ensemble & Spatial Hazards Data
+  // Initialize PMTiles on mount
+  useEffect(() => {
+    registerPMTilesProtocol();
+  }, []);
+
+  // Fetch V2 Ensemble, Hazards, and Asset Impacts with independent fallbacks
   useEffect(() => {
     async function loadGeospatialLayers() {
-      try {
-        const [ens, members, hazards, impacts] = await Promise.all([
-          getEnsembleAggregation(),
-          getEnsembleMembers(),
-          getHazardsGeoJSON(),
-          getAssetImpacts()
-        ]);
-        setEnsembleData(ens);
-        setRawMembers(members);
-        setHazardsGeoJSON(hazards);
-        setAssetImpacts(impacts);
-      } catch (err) {
-        console.warn("Geospatial layer loading note:", err);
-      }
+      const results = await Promise.allSettled([
+        getEnsembleAggregation(),
+        getEnsembleMembers(),
+        getHazardsGeoJSON(),
+        getAssetImpacts(),
+        getRouteRisk({
+          origin_lat: 20.2961,
+          origin_lon: 85.8245,
+          dest_lat: 19.8135,
+          dest_lon: 85.8312
+        })
+      ]);
+
+      if (results[0].status === 'fulfilled') setEnsembleData(results[0].value);
+      if (results[1].status === 'fulfilled') setRawMembers(results[1].value);
+      if (results[2].status === 'fulfilled') setHazardsGeoJSON(results[2].value);
+      if (results[3].status === 'fulfilled') setAssetImpacts(results[3].value);
+      if (results[4].status === 'fulfilled') setRouteRiskData(results[4].value?.data);
     }
     loadGeospatialLayers();
   }, []);
 
-  // 1. Initialize MapLibre GL Map with Dual Multi-Basemap Sources (CARTO Retina + ESRI Satellite)
+  // 1. Initialize MapLibre GL Map using OpenFreeMap Dark Basemap (Sections 3 & 5)
   useEffect(() => {
     if (!mapContainer.current || mapRef.current) return;
 
-    const cartoKey = getResolvedCartoKey();
-    const keyQuery = cartoKey ? `?key=${cartoKey}` : '';
+    registerPMTilesProtocol();
 
     const map = new maplibregl.Map({
       container: mapContainer.current,
-      style: {
-        version: 8,
-        sources: {
-          'carto-dark': {
-            type: 'raster',
-            tiles: [
-              `https://a.basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}@2x.png${keyQuery}`,
-              `https://b.basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}@2x.png${keyQuery}`,
-              `https://c.basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}@2x.png${keyQuery}`,
-              `https://d.basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}@2x.png${keyQuery}`
-            ],
-            tileSize: 256,
-            attribution: '© OpenStreetMap contributors, © CARTO'
-          },
-          'esri-satellite': {
-            type: 'raster',
-            tiles: [
-              'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
-            ],
-            tileSize: 256,
-            attribution: '© Esri, Maxar, Earthstar Geographics'
-          },
-          'carto-dark-labels': {
-            type: 'raster',
-            tiles: [
-              `https://a.basemaps.cartocdn.com/rastertiles/dark_only_labels/{z}/{x}/{y}@2x.png${keyQuery}`,
-              `https://b.basemaps.cartocdn.com/rastertiles/dark_only_labels/{z}/{x}/{y}@2x.png${keyQuery}`,
-              `https://c.basemaps.cartocdn.com/rastertiles/dark_only_labels/{z}/{x}/{y}@2x.png${keyQuery}`,
-              `https://d.basemaps.cartocdn.com/rastertiles/dark_only_labels/{z}/{x}/{y}@2x.png${keyQuery}`
-            ],
-            tileSize: 256,
-            attribution: '© CARTO'
-          }
-        },
-        layers: [
-          {
-            id: 'esri-satellite-layer',
-            type: 'raster',
-            source: 'esri-satellite',
-            minzoom: 0,
-            maxzoom: 19,
-            layout: {
-              visibility: 'none'
-            }
-          },
-          {
-            id: 'carto-dark-layer',
-            type: 'raster',
-            source: 'carto-dark',
-            minzoom: 0,
-            maxzoom: 19,
-            layout: {
-              visibility: 'visible'
-            }
-          },
-          {
-            id: 'carto-dark-labels-layer',
-            type: 'raster',
-            source: 'carto-dark-labels',
-            minzoom: 0,
-            maxzoom: 19,
-            layout: {
-              visibility: 'none'
-            }
-          }
-        ]
-      },
+      style: DEFAULT_MAP_STYLE_URL,
       center: [86.2, 19.8], // Bay of Bengal & Odisha coastline
       zoom: 6.8,
       attributionControl: false
     });
+
+    map.addControl(
+      new maplibregl.AttributionControl({
+        compact: true,
+        customAttribution: OPENFREEMAP_ATTRIBUTION
+      }),
+      'bottom-right'
+    );
 
     map.addControl(new maplibregl.NavigationControl({ showCompass: true }), 'bottom-right');
 
     const markReady = () => {
       if (map.isStyleLoaded()) {
         setIsLoaded(true);
+        setBasemapError(false);
       }
     };
 
@@ -212,9 +222,11 @@ export const MapContainer: React.FC<MapContainerProps> = ({
     map.on('style.load', markReady);
 
     map.on('error', (e) => {
-      // Graceful error logging without crashing map
-      if ((e as any)?.error?.status === 401 || (e as any)?.error?.status === 403) {
-        setTileKeyActive(false);
+      // If basemap tiles fail, surface explicit error state without crashing
+      const status = (e as any)?.error?.status;
+      if (status === 404 || status === 500 || status === 401 || (e as any)?.error?.message?.includes('Failed to fetch')) {
+        console.warn('Basemap tile warning:', e);
+        setBasemapError(true);
       }
     });
 
@@ -227,7 +239,7 @@ export const MapContainer: React.FC<MapContainerProps> = ({
     };
   }, []);
 
-  // 1b. Robust ResizeObserver for zero-distortion panel transitions
+  // 1b. ResizeObserver for fluid layout
   useEffect(() => {
     if (!mapContainer.current || !mapRef.current) return;
     const ro = new ResizeObserver(() => {
@@ -270,7 +282,7 @@ export const MapContainer: React.FC<MapContainerProps> = ({
     }
   }, [selectedInfra]);
 
-  // 2. Render Priority Hotspots Zones (Polygons) with Risk Color Coding & Selection Sync
+  // 2. Render Priority Hotspots Zones (Polygons)
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !isLoaded || !map.isStyleLoaded() || !hotspots?.length) return;
@@ -300,7 +312,10 @@ export const MapContainer: React.FC<MapContainerProps> = ({
       if (map.getSource('hotspot-zones-source')) {
         (map.getSource('hotspot-zones-source') as maplibregl.GeoJSONSource).setData(hotspotGeoJSON as any);
       } else {
-        map.addSource('hotspot-zones-source', { type: 'geojson', data: hotspotGeoJSON as any });
+        map.addSource('hotspot-zones-source', {
+          type: 'geojson',
+          data: hotspotGeoJSON as any
+        });
 
         map.addLayer({
           id: 'hotspot-zones-fill',
@@ -308,17 +323,15 @@ export const MapContainer: React.FC<MapContainerProps> = ({
           source: 'hotspot-zones-source',
           paint: {
             'fill-color': [
-              'match',
-              ['get', 'risk_band'],
-              'SEVERE', '#ef4444',
-              'HIGH', '#f97316',
-              'MODERATE', '#eab308',
-              '#06b6d4'
+              'case',
+              ['==', ['get', 'risk_band'], 'SEVERE'], '#ef4444',
+              ['==', ['get', 'risk_band'], 'HIGH'], '#f97316',
+              ['==', ['get', 'risk_band'], 'MODERATE'], '#eab308',
+              '#3b82f6'
             ],
             'fill-opacity': [
               'case',
-              ['boolean', ['get', 'is_selected'], false],
-              0.5,
+              ['get', 'is_selected'], 0.45,
               0.22
             ]
           }
@@ -330,20 +343,18 @@ export const MapContainer: React.FC<MapContainerProps> = ({
           source: 'hotspot-zones-source',
           paint: {
             'line-color': [
-              'match',
-              ['get', 'risk_band'],
-              'SEVERE', '#f87171',
-              'HIGH', '#fb923c',
-              'MODERATE', '#fde047',
-              '#38bdf8'
+              'case',
+              ['get', 'is_selected'], '#ffffff',
+              ['==', ['get', 'risk_band'], 'SEVERE'], '#f87171',
+              ['==', ['get', 'risk_band'], 'HIGH'], '#fb923c',
+              '#fde047'
             ],
             'line-width': [
               'case',
-              ['boolean', ['get', 'is_selected'], false],
-              2.8,
-              1.4
+              ['get', 'is_selected'], 2.5,
+              1.2
             ],
-            'line-dasharray': [3, 2]
+            'line-dasharray': [2, 1]
           }
         });
 
@@ -364,10 +375,10 @@ export const MapContainer: React.FC<MapContainerProps> = ({
                   <span style="background: ${props.risk_band === 'SEVERE' ? '#ef4444' : '#f97316'}; color: white; padding: 1px 4px; border-radius: 2px; font-size: 9px; font-weight: bold;">${props.risk_band}</span>
                 </div>
                 <div style="color: #94a3b8; font-size: 10px; margin-top: 2px;">${props.admin_area}</div>
-                <div style="margin-top: 4px; color: #f59e0b;">Threat: <b>${props.top_hazard}</b></div>
-                <div style="margin-top: 2px; color: #cbd5e1;">Pop at Risk: <b>${props.population ? props.population.toLocaleString() : 'N/A'}</b></div>
+                <div style="margin-top: 4px; color: #f59e0b;">Top Hazard: <b>${props.top_hazard}</b></div>
+                <div style="margin-top: 2px; color: #cbd5e1;">Pop Exposure: <b>${props.population ? props.population.toLocaleString() : 'N/A'}</b></div>
                 <div style="margin-top: 4px; font-size: 10px; color: #67e8f9; background: #0f172a; padding: 3px; border-radius: 2px;">
-                  Directive: ${props.action}
+                  Action: ${props.action}
                 </div>
               </div>
             `)
@@ -386,13 +397,12 @@ export const MapContainer: React.FC<MapContainerProps> = ({
     }
   }, [isLoaded, hotspots, selectedZone, onSelectZone]);
 
-  // 3. Render 64 Ensemble Members & Track Density Grid (Section 46 & 47)
+  // 3. Render 64 Ensemble Members & Track Density Grid (Section 13)
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !isLoaded || !map.isStyleLoaded() || !rawMembers.length) return;
 
     try {
-      // Group members by member_id into LineStrings
       const membersByGroup: Record<string, [number, number][]> = {};
       rawMembers.forEach(m => {
         if (!membersByGroup[m.member_id]) {
@@ -407,9 +417,7 @@ export const MapContainer: React.FC<MapContainerProps> = ({
           type: 'LineString',
           coordinates: membersByGroup[mId]
         },
-        properties: {
-          member_id: mId
-        }
+        properties: { member_id: mId }
       }));
 
       const ensembleGeoJSON = {
@@ -433,7 +441,7 @@ export const MapContainer: React.FC<MapContainerProps> = ({
         });
       }
 
-      // Render Track Density Grid Polygons (Section 47)
+      // Render Track Density Grid Polygons
       if (ensembleData?.track_density_geojson) {
         if (map.getSource('track-density-source')) {
           (map.getSource('track-density-source') as maplibregl.GeoJSONSource).setData(ensembleData.track_density_geojson as any);
@@ -448,161 +456,122 @@ export const MapContainer: React.FC<MapContainerProps> = ({
                 'interpolate',
                 ['linear'],
                 ['get', 'occupancy_pct'],
-                10, '#0e7490',
-                30, '#06b6d4',
-                50, '#eab308',
-                70, '#f97316',
-                90, '#ef4444'
+                5, '#082f49',
+                20, '#0284c7',
+                50, '#38bdf8',
+                80, '#f59e0b',
+                100, '#ef4444'
               ],
               'fill-opacity': 0.35
             }
-          }, 'ensemble-members-lines');
-
-          map.addLayer({
-            id: 'track-density-stroke',
-            type: 'line',
-            source: 'track-density-source',
-            paint: {
-              'line-color': '#38bdf8',
-              'line-width': 0.8,
-              'line-opacity': 0.3
-            }
-          }, 'ensemble-members-lines');
-
-          map.on('click', 'track-density-fill', (e) => {
-            if (!e.features || !e.features[0]) return;
-            const props = e.features[0].properties;
-            const coords = e.lngLat;
-
-            new maplibregl.Popup({ closeButton: true })
-              .setLngLat(coords)
-              .setHTML(`
-                <div style="font-family: monospace; font-size: 11px; padding: 2px; color: #f8fafc;">
-                  <b style="color: #38bdf8; font-size: 12px;">ENSEMBLE TRACK DENSITY</b>
-                  <div style="margin-top: 4px; color: #cbd5e1;">Occupancy: <b>${props.occupancy_pct}%</b></div>
-                  <div style="color: #f59e0b; font-weight: bold;">${props.label}</div>
-                  <div style="color: #64748b; font-size: 10px; margin-top: 2px;">64-Member WeatherNext 3 Flow</div>
-                </div>
-              `)
-              .addTo(map);
-          });
-
-          map.on('mouseenter', 'track-density-fill', () => {
-            map.getCanvas().style.cursor = 'pointer';
-          });
-          map.on('mouseleave', 'track-density-fill', () => {
-            map.getCanvas().style.cursor = '';
           });
         }
       }
     } catch (err) {
-      console.warn("Ensemble render warning:", err);
+      console.warn("Ensemble members render warning:", err);
     }
   }, [isLoaded, rawMembers, ensembleData]);
 
-  // 4. Render Official Track, Consensus Track & Observed Track
+  // 4. Render Official IMD Track & Cone of Uncertainty
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !isLoaded || !map.isStyleLoaded() || !trackData) return;
 
     try {
-      // A. Observed Track
-      if (trackData.observed_track && trackData.observed_track.length > 0) {
-        const observedCoords = trackData.observed_track.map(p => [p.longitude, p.latitude]);
-        const observedGeoJSON = {
-          type: 'Feature',
-          geometry: { type: 'LineString', coordinates: observedCoords }
-        };
+      const obsPoints: any[] = (trackData as any).observed_track || (trackData as any).observed || [];
+      const fcPoints: any[] = (trackData as any).forecast_track || (trackData as any).forecast || [];
+      const observedCoords = obsPoints.map((p: any) => [p.longitude, p.latitude]);
+      const forecastCoords = fcPoints.map((p: any) => [p.longitude, p.latitude]);
 
+      // Observed Track Line
+      if (observedCoords.length > 1) {
+        const observedLine = {
+          type: 'Feature',
+          geometry: { type: 'LineString', coordinates: observedCoords },
+          properties: {}
+        };
         if (map.getSource('observed-track-source')) {
-          (map.getSource('observed-track-source') as maplibregl.GeoJSONSource).setData(observedGeoJSON as any);
+          (map.getSource('observed-track-source') as maplibregl.GeoJSONSource).setData(observedLine as any);
         } else {
-          map.addSource('observed-track-source', { type: 'geojson', data: observedGeoJSON as any });
+          map.addSource('observed-track-source', { type: 'geojson', data: observedLine as any });
           map.addLayer({
             id: 'observed-track-line',
             type: 'line',
             source: 'observed-track-source',
-            paint: {
-              'line-color': '#38bdf8',
-              'line-width': 3,
-              'line-dasharray': [2, 1.5]
-            }
+            paint: { 'line-color': '#ef4444', 'line-width': 2.8 }
           });
         }
       }
 
-      // B. Forecast Official Track
-      if (trackData.forecast_track && trackData.forecast_track.length > 0) {
-        const forecastCoords = trackData.forecast_track.map(p => [p.longitude, p.latitude]);
-        const forecastGeoJSON = {
+      // Forecast Track Line
+      if (forecastCoords.length > 1) {
+        const forecastLine = {
           type: 'Feature',
-          geometry: { type: 'LineString', coordinates: forecastCoords }
+          geometry: { type: 'LineString', coordinates: forecastCoords },
+          properties: {}
         };
-
         if (map.getSource('forecast-track-source')) {
-          (map.getSource('forecast-track-source') as maplibregl.GeoJSONSource).setData(forecastGeoJSON as any);
+          (map.getSource('forecast-track-source') as maplibregl.GeoJSONSource).setData(forecastLine as any);
         } else {
-          map.addSource('forecast-track-source', { type: 'geojson', data: forecastGeoJSON as any });
+          map.addSource('forecast-track-source', { type: 'geojson', data: forecastLine as any });
           map.addLayer({
             id: 'forecast-track-line',
             type: 'line',
             source: 'forecast-track-source',
             paint: {
-              'line-color': '#ef4444',
-              'line-width': 3.5
+              'line-color': '#f97316',
+              'line-width': 2.4,
+              'line-dasharray': [2, 1]
             }
           });
         }
+      }
 
-        // Forecast Points
-        const forecastPointsGeoJSON = {
-          type: 'FeatureCollection',
-          features: trackData.forecast_track.map(p => ({
-            type: 'Feature',
-            geometry: { type: 'Point', coordinates: [p.longitude, p.latitude] },
-            properties: {
-              point_id: p.point_id,
-              step_hours: p.step_hours,
-              wind: p.wind_speed_kmh,
-              category: p.category,
-              pressure: p.central_pressure_hpa
-            }
-          }))
-        };
-
-        if (map.getSource('forecast-points-source')) {
-          (map.getSource('forecast-points-source') as maplibregl.GeoJSONSource).setData(forecastPointsGeoJSON as any);
-        } else {
-          map.addSource('forecast-points-source', { type: 'geojson', data: forecastPointsGeoJSON as any });
-          map.addLayer({
-            id: 'forecast-points-circle',
-            type: 'circle',
-            source: 'forecast-points-source',
-            paint: {
-              'circle-color': '#dc2626',
-              'circle-radius': 5.5,
-              'circle-stroke-color': '#ffffff',
-              'circle-stroke-width': 2
-            }
-          });
-
-          map.on('click', 'forecast-points-circle', (e) => {
-            if (!e.features || !e.features[0]) return;
-            const props = e.features[0].properties;
-            const coords = (e.features[0].geometry as any).coordinates.slice();
-
-            new maplibregl.Popup({ closeButton: true })
-              .setLngLat(coords)
-              .setHTML(`
-                <div style="font-family: monospace; font-size: 11px; color: #f8fafc; padding: 2px;">
-                  <b style="color: #ef4444; font-size: 12px;">+${props.step_hours}h OFFICIAL TRACK (${props.category})</b>
-                  <div style="margin-top: 3px;">Max Wind: <b>${props.wind} km/h</b></div>
-                  <div>Central Pressure: <b>${props.pressure} hPa</b></div>
-                </div>
-              `)
-              .addTo(map);
-          });
+      // Forecast Points
+      const forecastPointFeatures = fcPoints.map((p: any) => ({
+        type: 'Feature',
+        geometry: { type: 'Point', coordinates: [p.longitude, p.latitude] },
+        properties: {
+          timestamp: p.timestamp,
+          wind_speed: p.wind_speed_kmh || p.wind_speed,
+          gust_speed: p.gust_kmh || p.gust_speed,
+          pressure: p.central_pressure_hpa || p.pressure,
+          category: p.category
         }
+      }));
+
+      const pointsGeoJSON = { type: 'FeatureCollection', features: forecastPointFeatures };
+      if (map.getSource('forecast-points-source')) {
+        (map.getSource('forecast-points-source') as maplibregl.GeoJSONSource).setData(pointsGeoJSON as any);
+      } else {
+        map.addSource('forecast-points-source', { type: 'geojson', data: pointsGeoJSON as any });
+        map.addLayer({
+          id: 'forecast-points-circle',
+          type: 'circle',
+          source: 'forecast-points-source',
+          paint: {
+            'circle-color': '#f97316',
+            'circle-radius': 5,
+            'circle-stroke-color': '#ffffff',
+            'circle-stroke-width': 1.5
+          }
+        });
+
+        map.on('click', 'forecast-points-circle', (e) => {
+          if (!e.features || !e.features[0]) return;
+          const props = e.features[0].properties;
+          new maplibregl.Popup({ closeButton: true })
+            .setLngLat((e.features[0].geometry as any).coordinates)
+            .setHTML(`
+              <div style="font-family: monospace; font-size: 11px; padding: 2px; color: #f8fafc;">
+                <b style="color: #f97316;">${props.category}</b>
+                <div>Time: <b>${props.timestamp}</b></div>
+                <div>Sustained Wind: <b>${props.wind_speed} km/h</b></div>
+                <div>Pressure: <b>${props.pressure} hPa</b></div>
+              </div>
+            `)
+            .addTo(map);
+        });
       }
     } catch (err) {
       console.warn("Track render warning:", err);
@@ -628,7 +597,7 @@ export const MapContainer: React.FC<MapContainerProps> = ({
             'fill-color': ['get', 'color'],
             'fill-opacity': ['get', 'fill_opacity']
           }
-        }, 'observed-track-line');
+        });
 
         map.addLayer({
           id: 'hazards-spatial-line',
@@ -639,20 +608,18 @@ export const MapContainer: React.FC<MapContainerProps> = ({
             'line-width': 1.5,
             'line-dasharray': [3, 2]
           }
-        }, 'observed-track-line');
+        });
 
         map.on('click', 'hazards-spatial-fill', (e) => {
           if (!e.features || !e.features[0]) return;
           const props = e.features[0].properties;
-          const coords = e.lngLat;
-
           new maplibregl.Popup({ closeButton: true })
-            .setLngLat(coords)
+            .setLngLat(e.lngLat)
             .setHTML(`
               <div style="font-family: monospace; font-size: 11px; padding: 2px; color: #f8fafc;">
                 <b style="color: ${props.color}; font-size: 12px;">${props.label}</b>
-                <div style="color: #cbd5e1; margin-top: 3px;">Threat Level: <b>${props.intensity}</b></div>
-                <div style="color: #94a3b8; font-size: 10px; margin-top: 2px;">Methodology: GRID FORECAST</div>
+                <div style="color: #cbd5e1; margin-top: 3px;">Hazard: <b>${props.intensity}</b></div>
+                <div style="color: #94a3b8; font-size: 10px; margin-top: 2px;">Classification: MODEL_OUTPUT</div>
               </div>
             `)
             .addTo(map);
@@ -663,7 +630,7 @@ export const MapContainer: React.FC<MapContainerProps> = ({
     }
   }, [isLoaded, hazardsGeoJSON]);
 
-  // 6. Render Infrastructure with Probabilistic Impact Cards (Section 48)
+  // 6. Render Infrastructure with MapLibre Source Clustering (Section 14)
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !isLoaded || !map.isStyleLoaded() || !infrastructure.length) return;
@@ -683,10 +650,10 @@ export const MapContainer: React.FC<MapContainerProps> = ({
               risk_score: i.risk_score,
               threat: i.primary_threat,
               elevation: i.elevation_m,
-              p_combined: matchingProb ? Math.round(matchingProb.p_combined_impact * 100) : 62,
-              p_wind: matchingProb ? Math.round(matchingProb.p_wind_exceedance * 100) : 84,
-              p_rain: matchingProb ? Math.round(matchingProb.p_rain_exceedance * 100) : 71,
-              p_flood: matchingProb ? Math.round(matchingProb.p_inundation_exceedance * 100) : 46,
+              p_combined: matchingProb ? Math.round(matchingProb.p_combined_impact * 100) : 60,
+              p_wind: matchingProb ? Math.round(matchingProb.p_wind_exceedance * 100) : 80,
+              p_rain: matchingProb ? Math.round(matchingProb.p_rain_exceedance * 100) : 70,
+              p_flood: matchingProb ? Math.round(matchingProb.p_inundation_exceedance * 100) : 45,
               backup_power: matchingProb?.backup_power || "AVAILABLE",
               road_access: matchingProb?.road_access_status || "MODELLED DEGRADED",
               data_quality: matchingProb?.data_quality_pct || 92.5
@@ -698,12 +665,62 @@ export const MapContainer: React.FC<MapContainerProps> = ({
       if (map.getSource('infra-source')) {
         (map.getSource('infra-source') as maplibregl.GeoJSONSource).setData(geojson as any);
       } else {
-        map.addSource('infra-source', { type: 'geojson', data: geojson as any });
+        // Configure clustering directly in GeoJSON source (Section 14)
+        map.addSource('infra-source', { 
+          type: 'geojson', 
+          data: geojson as any,
+          cluster: true,
+          clusterMaxZoom: 14,
+          clusterRadius: 40
+        });
 
+        // Cluster Circles
         map.addLayer({
-          id: 'infra-points',
+          id: 'infra-clusters',
           type: 'circle',
           source: 'infra-source',
+          filter: ['has', 'point_count'],
+          paint: {
+            'circle-color': [
+              'step',
+              ['get', 'point_count'],
+              '#0284c7', 5,
+              '#38bdf8', 15,
+              '#f59e0b'
+            ],
+            'circle-radius': [
+              'step',
+              ['get', 'point_count'],
+              15, 5,
+              20, 15,
+              25
+            ],
+            'circle-stroke-color': '#080d1a',
+            'circle-stroke-width': 2
+          }
+        });
+
+        // Cluster Count Text
+        map.addLayer({
+          id: 'infra-cluster-count',
+          type: 'symbol',
+          source: 'infra-source',
+          filter: ['has', 'point_count'],
+          layout: {
+            'text-field': '{point_count_abbreviated}',
+            'text-size': 11
+          },
+          paint: {
+            'text-color': '#ffffff'
+          }
+        });
+
+        // Unclustered Infrastructure Points
+        map.addLayer({
+          id: 'infra-unclustered-point',
+          type: 'circle',
+          source: 'infra-source',
+          filter: ['!', ['has', 'point_count']],
           paint: {
             'circle-color': [
               'match',
@@ -718,11 +735,24 @@ export const MapContainer: React.FC<MapContainerProps> = ({
             ],
             'circle-radius': 7.0,
             'circle-stroke-color': '#050914',
-            'circle-stroke-width': 2.2
+            'circle-stroke-width': 2.0
           }
         });
 
-        map.on('click', 'infra-points', (e) => {
+        // Zoom into cluster on click
+        map.on('click', 'infra-clusters', async (e) => {
+          const features = map.queryRenderedFeatures(e.point, { layers: ['infra-clusters'] });
+          const clusterId = features[0].properties.cluster_id;
+          const source: any = map.getSource('infra-source');
+          const zoom = await source.getClusterExpansionZoom(clusterId);
+          map.easeTo({
+            center: (features[0].geometry as any).coordinates,
+            zoom: zoom
+          });
+        });
+
+        // Click individual asset point
+        map.on('click', 'infra-unclustered-point', (e) => {
           if (!e.features || !e.features[0]) return;
           const props = e.features[0].properties;
           const coords = (e.features[0].geometry as any).coordinates.slice();
@@ -744,7 +774,7 @@ export const MapContainer: React.FC<MapContainerProps> = ({
                 <div style="color: #94a3b8; font-size: 10px; margin-top: 1px;">CRITICALITY: <b>${props.type.toUpperCase()}</b></div>
                 
                 <div style="margin-top: 6px; padding: 4px 6px; background: #1e1b4b; border: 1px solid #4338ca; border-radius: 4px;">
-                  <span style="color: #c7d2fe;">COMBINED IMPACT PROBABILITY: </span>
+                  <span style="color: #c7d2fe;">P(COMBINED IMPACT): </span>
                   <b style="color: #f43f5e; font-size: 13px;">${props.p_combined}%</b>
                 </div>
 
@@ -754,30 +784,100 @@ export const MapContainer: React.FC<MapContainerProps> = ({
                   <div>• Flood P(>0.5m): <b style="color: #06b6d4;">${props.p_flood}%</b></div>
                   <div>• Backup Power: <b style="color: #34d399;">${props.backup_power}</b></div>
                   <div>• Road Access: <b style="color: #f43f5e;">${props.road_access}</b></div>
-                  <div>• Data Quality: <b style="color: #10b981;">${props.data_quality}%</b></div>
-                </div>
-
-                <div style="margin-top: 6px; font-size: 9px; color: #64748b; border-top: 1px solid #1e293b; padding-top: 3px;">
-                  Source: CYCLONE-X 64-mbr Impact Engine v2.0
                 </div>
               </div>
             `)
             .addTo(map);
         });
 
-        map.on('mouseenter', 'infra-points', () => {
-          map.getCanvas().style.cursor = 'pointer';
-        });
-        map.on('mouseleave', 'infra-points', () => {
-          map.getCanvas().style.cursor = '';
-        });
+        map.on('mouseenter', 'infra-unclustered-point', () => { map.getCanvas().style.cursor = 'pointer'; });
+        map.on('mouseleave', 'infra-unclustered-point', () => { map.getCanvas().style.cursor = ''; });
+        map.on('mouseenter', 'infra-clusters', () => { map.getCanvas().style.cursor = 'pointer'; });
+        map.on('mouseleave', 'infra-clusters', () => { map.getCanvas().style.cursor = ''; });
       }
     } catch (err) {
       console.warn("Infrastructure render warning:", err);
     }
   }, [isLoaded, infrastructure, assetImpacts, onSelectInfrastructure, onSelectAssetImpact]);
 
-  // 7. Map Mode Visibility & Basemap Switching Controller (Section 45)
+  // 7. Render Emergency Route Risk Corridors (Section 19 & 20)
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !isLoaded || !map.isStyleLoaded() || !routeRiskData) return;
+
+    try {
+      const baselineGeoJSON = {
+        type: 'Feature',
+        geometry: {
+          type: 'LineString',
+          coordinates: routeRiskData.route_geometry || [
+            [85.8245, 20.2961],
+            [85.8340, 20.1500],
+            [85.8300, 19.9800],
+            [85.8312, 19.8135]
+          ]
+        },
+        properties: {
+          name: 'Baseline Route',
+          exposure: routeRiskData.baseline_exposure_score
+        }
+      };
+
+      const altGeoJSON = {
+        type: 'Feature',
+        geometry: {
+          type: 'LineString',
+          coordinates: routeRiskData.alternative_geometry || [
+            [85.8245, 20.2961],
+            [85.7000, 20.1000],
+            [85.6500, 19.9500],
+            [85.8312, 19.8135]
+          ]
+        },
+        properties: {
+          name: 'Alternative Evacuation Corridor',
+          reduction: routeRiskData.exposure_reduction_pct
+        }
+      };
+
+      if (map.getSource('route-baseline-source')) {
+        (map.getSource('route-baseline-source') as maplibregl.GeoJSONSource).setData(baselineGeoJSON as any);
+      } else {
+        map.addSource('route-baseline-source', { type: 'geojson', data: baselineGeoJSON as any });
+        map.addLayer({
+          id: 'route-baseline-line',
+          type: 'line',
+          source: 'route-baseline-source',
+          paint: {
+            'line-color': '#ef4444',
+            'line-width': 3.5,
+            'line-opacity': 0.8
+          }
+        });
+      }
+
+      if (map.getSource('route-alt-source')) {
+        (map.getSource('route-alt-source') as maplibregl.GeoJSONSource).setData(altGeoJSON as any);
+      } else {
+        map.addSource('route-alt-source', { type: 'geojson', data: altGeoJSON as any });
+        map.addLayer({
+          id: 'route-alt-line',
+          type: 'line',
+          source: 'route-alt-source',
+          paint: {
+            'line-color': '#10b981',
+            'line-width': 3.5,
+            'line-dasharray': [3, 1],
+            'line-opacity': 0.85
+          }
+        });
+      }
+    } catch (err) {
+      console.warn("Route risk render warning:", err);
+    }
+  }, [isLoaded, routeRiskData]);
+
+  // 8. Map Mode Visibility Controller (Section 13)
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !isLoaded || !map.isStyleLoaded()) return;
@@ -789,12 +889,6 @@ export const MapContainer: React.FC<MapContainerProps> = ({
         }
       };
 
-      // Basemap switching (Satellite vs CARTO Dark Matter)
-      const isSatellite = activeMode === 'SATELLITE';
-      setVis('esri-satellite-layer', isSatellite);
-      setVis('carto-dark-labels-layer', isSatellite);
-      setVis('carto-dark-layer', !isSatellite);
-
       switch (activeMode) {
         case 'TRACK':
           setVis('observed-track-line', true);
@@ -803,32 +897,30 @@ export const MapContainer: React.FC<MapContainerProps> = ({
           setVis('ensemble-members-lines', false);
           setVis('track-density-fill', false);
           setVis('hazards-spatial-fill', false);
-          setVis('infra-points', false);
+          setVis('infra-clusters', false);
+          setVis('infra-cluster-count', false);
+          setVis('infra-unclustered-point', false);
           setVis('hotspot-zones-fill', false);
           setVis('hotspot-zones-stroke', false);
+          setVis('route-baseline-line', false);
+          setVis('route-alt-line', false);
           break;
         case 'ENSEMBLE':
           setVis('observed-track-line', true);
           setVis('forecast-track-line', true);
           setVis('forecast-points-circle', true);
           setVis('ensemble-members-lines', true);
-          setVis('track-density-fill', showDensityGrid);
+          setVis('track-density-fill', true);
           setVis('hazards-spatial-fill', false);
-          setVis('infra-points', true);
+          setVis('infra-clusters', true);
+          setVis('infra-cluster-count', true);
+          setVis('infra-unclustered-point', true);
           setVis('hotspot-zones-fill', true);
           setVis('hotspot-zones-stroke', true);
+          setVis('route-baseline-line', false);
+          setVis('route-alt-line', false);
           break;
         case 'WIND':
-          setVis('observed-track-line', false);
-          setVis('forecast-track-line', true);
-          setVis('forecast-points-circle', false);
-          setVis('ensemble-members-lines', false);
-          setVis('track-density-fill', false);
-          setVis('hazards-spatial-fill', true);
-          setVis('infra-points', true);
-          setVis('hotspot-zones-fill', true);
-          setVis('hotspot-zones-stroke', true);
-          break;
         case 'RAINFALL':
         case 'FLOOD':
         case 'IMPACT':
@@ -838,9 +930,13 @@ export const MapContainer: React.FC<MapContainerProps> = ({
           setVis('ensemble-members-lines', false);
           setVis('track-density-fill', false);
           setVis('hazards-spatial-fill', true);
-          setVis('infra-points', true);
+          setVis('infra-clusters', true);
+          setVis('infra-cluster-count', true);
+          setVis('infra-unclustered-point', true);
           setVis('hotspot-zones-fill', true);
           setVis('hotspot-zones-stroke', true);
+          setVis('route-baseline-line', false);
+          setVis('route-alt-line', false);
           break;
         case 'INFRASTRUCTURE':
           setVis('observed-track-line', false);
@@ -849,42 +945,28 @@ export const MapContainer: React.FC<MapContainerProps> = ({
           setVis('ensemble-members-lines', false);
           setVis('track-density-fill', false);
           setVis('hazards-spatial-fill', false);
-          setVis('infra-points', true);
+          setVis('infra-clusters', true);
+          setVis('infra-cluster-count', true);
+          setVis('infra-unclustered-point', true);
           setVis('hotspot-zones-fill', true);
           setVis('hotspot-zones-stroke', true);
+          setVis('route-baseline-line', false);
+          setVis('route-alt-line', false);
           break;
-        case 'POPULATION':
-          setVis('observed-track-line', true);
+        case 'ROUTE RISK':
+          setVis('observed-track-line', false);
           setVis('forecast-track-line', true);
           setVis('forecast-points-circle', false);
           setVis('ensemble-members-lines', false);
           setVis('track-density-fill', false);
-          setVis('hazards-spatial-fill', false);
-          setVis('infra-points', true);
-          setVis('hotspot-zones-fill', true);
-          setVis('hotspot-zones-stroke', true);
-          break;
-        case 'SATELLITE':
-          setVis('observed-track-line', true);
-          setVis('forecast-track-line', true);
-          setVis('forecast-points-circle', true);
-          setVis('ensemble-members-lines', true);
-          setVis('track-density-fill', showDensityGrid);
           setVis('hazards-spatial-fill', true);
-          setVis('infra-points', true);
-          setVis('hotspot-zones-fill', true);
-          setVis('hotspot-zones-stroke', true);
-          break;
-        case 'FORECAST CHANGE':
-          setVis('observed-track-line', true);
-          setVis('forecast-track-line', true);
-          setVis('forecast-points-circle', true);
-          setVis('ensemble-members-lines', true);
-          setVis('track-density-fill', true);
-          setVis('hazards-spatial-fill', false);
-          setVis('infra-points', false);
+          setVis('infra-clusters', true);
+          setVis('infra-cluster-count', true);
+          setVis('infra-unclustered-point', true);
           setVis('hotspot-zones-fill', false);
           setVis('hotspot-zones-stroke', false);
+          setVis('route-baseline-line', true);
+          setVis('route-alt-line', true);
           break;
         default:
           setVis('observed-track-line', true);
@@ -893,15 +975,19 @@ export const MapContainer: React.FC<MapContainerProps> = ({
           setVis('ensemble-members-lines', true);
           setVis('track-density-fill', true);
           setVis('hazards-spatial-fill', true);
-          setVis('infra-points', true);
+          setVis('infra-clusters', true);
+          setVis('infra-cluster-count', true);
+          setVis('infra-unclustered-point', true);
           setVis('hotspot-zones-fill', true);
           setVis('hotspot-zones-stroke', true);
+          setVis('route-baseline-line', false);
+          setVis('route-alt-line', false);
           break;
       }
     } catch (err) {
       console.warn("Mode change sync warning:", err);
     }
-  }, [isLoaded, activeMode, showDensityGrid]);
+  }, [isLoaded, activeMode]);
 
   const mapModesList: MapMode[] = [
     'TRACK',
@@ -911,14 +997,52 @@ export const MapContainer: React.FC<MapContainerProps> = ({
     'FLOOD',
     'IMPACT',
     'INFRASTRUCTURE',
+    'ROUTE RISK',
     'POPULATION',
-    'SATELLITE',
-    'FORECAST CHANGE'
+    'SATELLITE'
   ];
 
   return (
     <div className="relative w-full h-full min-h-[500px] bg-[#050914] overflow-hidden select-none">
       <div ref={mapContainer} className="w-full h-full" />
+
+      {/* BASEMAP UNAVAILABLE ERROR BANNER (Section 8 & 15) */}
+      {(basemapError || isOfflineMode) && (
+        <div className="absolute top-16 left-1/2 -translate-x-1/2 z-30 bg-rose-950/95 border border-rose-600 text-rose-200 px-4 py-2.5 rounded-lg shadow-2xl backdrop-blur-md flex items-center gap-3 font-mono text-xs max-w-xl">
+          <AlertTriangle className="w-5 h-5 text-rose-400 shrink-0" />
+          <div>
+            <div className="font-bold text-white flex items-center gap-2">
+              BASEMAP UNAVAILABLE
+              {isOfflineMode && <span className="bg-amber-500/20 text-amber-300 text-[10px] px-1.5 py-0.5 rounded border border-amber-500/40">LOCAL OFFLINE MAP ACTIVE</span>}
+            </div>
+            <div className="text-[11px] text-rose-300">
+              OpenFreeMap basemap could not be reached. Local administrative geometry and cyclone risk layers remain fully active.
+            </div>
+          </div>
+          <div className="flex items-center gap-1.5 shrink-0">
+            <button 
+              onClick={() => {
+                setIsOfflineMode(true);
+                setBasemapError(false);
+                if (mapRef.current) mapRef.current.setStyle(LOCAL_OFFLINE_STYLE);
+              }}
+              className="px-2 py-1 bg-amber-600 hover:bg-amber-500 text-black font-bold rounded text-[10px]"
+            >
+              LOCAL OFFLINE MAP
+            </button>
+            <button 
+              onClick={() => {
+                setIsOfflineMode(false);
+                setBasemapError(false);
+                if (mapRef.current) mapRef.current.setStyle(DEFAULT_MAP_STYLE_URL);
+              }}
+              className="px-2 py-1 bg-rose-900 hover:bg-rose-800 text-white rounded text-[10px] font-bold"
+            >
+              Retry
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* 10 Map Modes Selector Pills Top-Center (Section 45) */}
       <div className="absolute top-3 left-1/2 -translate-x-1/2 z-10 flex items-center gap-1 bg-[#080d1a]/95 border border-[#334155] p-1 rounded-lg shadow-2xl backdrop-blur-md max-w-[95vw] overflow-x-auto">
@@ -934,6 +1058,7 @@ export const MapContainer: React.FC<MapContainerProps> = ({
                   : 'text-slate-300 hover:text-white hover:bg-[#1e293b]'
               }`}
             >
+              {mode === 'ROUTE RISK' && <Navigation className="w-3 h-3" />}
               {mode === 'SATELLITE' && <Satellite className="w-3 h-3" />}
               {mode}
             </button>
@@ -943,32 +1068,6 @@ export const MapContainer: React.FC<MapContainerProps> = ({
 
       {/* Floating Map Controls Top-Right */}
       <div className="absolute top-14 right-3 flex flex-col gap-1.5 z-10">
-        <button
-          onClick={() => setShowDensityGrid(!showDensityGrid)}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-semibold shadow-xl transition-all ${
-            showDensityGrid 
-              ? 'bg-cyan-950 text-cyan-300 border border-cyan-700' 
-              : 'bg-[#0f172a]/90 hover:bg-[#1e293b] text-slate-300 border border-[#334155]'
-          }`}
-          title="Toggle Ensemble Density Grid"
-        >
-          <Layers className="w-3.5 h-3.5 text-cyan-400" />
-          <span className="font-mono text-[11px]">DENSITY</span>
-        </button>
-
-        <button
-          onClick={() => setActiveMode(activeMode === 'SATELLITE' ? 'ENSEMBLE' : 'SATELLITE')}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-semibold shadow-xl transition-all ${
-            activeMode === 'SATELLITE'
-              ? 'bg-amber-950 text-amber-300 border border-amber-600'
-              : 'bg-[#0f172a]/90 hover:bg-[#1e293b] text-slate-300 border border-[#334155]'
-          }`}
-          title="Toggle Satellite Imagery"
-        >
-          <Globe className="w-3.5 h-3.5 text-amber-400" />
-          <span className="font-mono text-[11px]">SATELLITE</span>
-        </button>
-
         <button
           onClick={() => {
             if (mapRef.current) {
@@ -982,31 +1081,23 @@ export const MapContainer: React.FC<MapContainerProps> = ({
         </button>
       </div>
 
-      {/* Basemap Key Status Pill Top-Left */}
+      {/* Primary Map Engine Badge Top-Left (Sections 2, 3, 5) */}
       <div className="absolute top-3 left-3 z-10 flex items-center gap-1.5 bg-[#080d1a]/95 border border-[#334155] px-2.5 py-1.5 rounded text-[10px] font-mono shadow-xl backdrop-blur-md">
         <span className="relative flex h-2 w-2">
-          {tileKeyActive ? (
-            <>
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-            </>
-          ) : (
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
-          )}
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+          <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
         </span>
-        <span className="text-slate-300 font-bold">
-          {activeMode === 'SATELLITE' ? 'ESRI SATELLITE (HIGH-RES)' : 'CARTO DARK MATTER (RETINA)'}
-        </span>
-        <span className="text-emerald-400 font-semibold px-1 rounded bg-emerald-950/60 border border-emerald-800 text-[9px]">
-          AUTH OK
+        <span className="text-slate-300 font-bold">MAPLIBRE GL JS</span>
+        <span className="text-cyan-400 font-semibold px-1 rounded bg-cyan-950/60 border border-cyan-800 text-[9px]">
+          OPENFREEMAP
         </span>
       </div>
 
       {/* Dynamic Scientific Legend Bottom-Left */}
       <div className="absolute bottom-3 left-3 bg-[#080d1a]/95 border border-[#334155] rounded-md px-3 py-2 z-10 text-[10px] font-mono shadow-2xl backdrop-blur-md max-w-[85vw] overflow-x-auto">
         <div className="font-bold text-slate-200 mb-1 flex items-center justify-between gap-4">
-          <span className="text-cyan-400">MAP MODE: {activeMode}</span>
-          <span className="text-slate-500">WeatherNext 3 (64-Mbr Flow)</span>
+          <span className="text-cyan-400">ACTIVE MODE: {activeMode}</span>
+          <span className="text-slate-500">WeatherNext 3 (64-Mbr Ensemble)</span>
         </div>
         <div className="flex items-center gap-3 text-slate-300 whitespace-nowrap">
           <div className="flex items-center gap-1">
@@ -1023,15 +1114,11 @@ export const MapContainer: React.FC<MapContainerProps> = ({
           </div>
           <div className="flex items-center gap-1">
             <span className="w-2.5 h-2.5 rounded-full bg-sky-400 inline-block"></span>
-            <span>Hospital</span>
+            <span>Clustered Assets</span>
           </div>
           <div className="flex items-center gap-1">
-            <span className="w-2.5 h-2.5 rounded-full bg-amber-400 inline-block"></span>
-            <span>Substation</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <span className="w-2.5 h-2.5 rounded-full bg-orange-500 inline-block"></span>
-            <span>Port</span>
+            <span className="w-3 h-0.5 bg-emerald-400 inline-block border-dashed"></span>
+            <span>Alt Evacuation Route</span>
           </div>
         </div>
       </div>

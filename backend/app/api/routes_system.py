@@ -12,7 +12,7 @@ router = APIRouter(tags=["System & Data Health"])
 @router.get("/health")
 async def get_health():
     """Returns granular health and connectivity status of each subsystem."""
-    has_ee = bool(settings.EARTH_ENGINE_PROJECT or settings.GOOGLE_CLOUD_PROJECT)
+    ee_live = EarthEngineService().is_live()
     has_gemini = bool(settings.GEMINI_API_KEY)
     wn3_provider = WeatherNext3Provider()
     
@@ -23,7 +23,9 @@ async def get_health():
         "mode": settings.APP_MODE.upper(),
         "subsystems": {
             "database": "healthy (PostgreSQL / PostGIS schema active)",
-            "earth_engine": "configured" if has_ee else "unavailable (demo cache active)",
+            "map_engine": f"healthy ({settings.MAP_PROVIDER} via MapLibre GL JS)",
+            "route_engine": f"healthy ({settings.ROUTE_PROVIDER})",
+            "earth_engine": "connected" if ee_live else ("not_configured" if not (settings.EARTH_ENGINE_PROJECT or settings.GOOGLE_CLOUD_PROJECT) else "unavailable"),
             "weathernext_3": wn3_provider.get_status_info()["status"],
             "weather": "healthy (ECMWF Open-Meteo adapter)",
             "gemini": f"configured ({settings.GEMINI_MODEL})" if has_gemini else "unconfigured (deterministic fallback active)",
@@ -243,10 +245,10 @@ async def get_google_compliance():
             },
             {
                 "service": "Google Maps Platform",
-                "category": "Geospatial & Emergency Routing",
-                "status": "CONNECTED" if has_maps else "NOT CONFIGURED",
-                "details": "Maps JS API, Routes API v2, Geocoding, Google Weather API.",
-                "mandatory": True
+                "category": "Geospatial & Emergency Routing (Optional Adapter)",
+                "status": "CONNECTED" if has_maps else "OPTIONAL (NOT CONFIGURED)",
+                "details": "Optional adapter. Primary geospatial visualization runs on MapLibre GL JS / OpenFreeMap and self-hosted Valhalla routing.",
+                "mandatory": False
             },
             {
                 "service": "BigQuery",

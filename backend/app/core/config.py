@@ -56,6 +56,7 @@ class Settings(BaseSettings):
     BIGQUERY_DATASET: str = os.getenv("BIGQUERY_DATASET", "cyclonex_analytics")
     
     # Google Cloud Storage & Pub/Sub
+    STORAGE_PROVIDER: str = os.getenv("STORAGE_PROVIDER", "gcs" if os.getenv("GCS_BUCKET") else "local")
     GCS_BUCKET: str = os.getenv("GCS_BUCKET", "")
     PUBSUB_PROJECT: str = os.getenv("PUBSUB_PROJECT", "")
     
@@ -87,9 +88,18 @@ class Settings(BaseSettings):
     # Notification & Storage
     NOTIFICATION_PROVIDER: str = os.getenv("NOTIFICATION_PROVIDER", "dry_run")
     NOTIFICATION_API_KEY: str = os.getenv("NOTIFICATION_API_KEY", "")
-    STORAGE_PROVIDER: str = os.getenv("STORAGE_PROVIDER", "filesystem")
-    MAP_PROVIDER: str = os.getenv("MAP_PROVIDER", "google-maps")
+    # Geospatial, Map & Tile Providers (MapLibre primary, PMTiles enterprise)
+    MAP_PROVIDER: str = os.getenv("MAP_PROVIDER", "openfreemap").lower()  # openfreemap, pmtiles, maptiler, google-maps
     MAP_API_KEY: str = os.getenv("MAP_API_KEY", "")
+    PMTILES_URL: str = os.getenv("PMTILES_URL", "")
+    
+    # Emergency Routing Configuration (Valhalla self-hosted primary)
+    ROUTE_PROVIDER: str = os.getenv("ROUTE_PROVIDER", "valhalla").lower()  # valhalla, google-routes, osrm, demo
+    VALHALLA_URL: str = os.getenv("VALHALLA_URL", "http://valhalla:8002/route")
+    OSRM_URL: str = os.getenv("OSRM_URL", "http://osrm:5000/route/v1/driving")
+    
+    # Canonical Event Configuration
+    DEFAULT_EVENT_ID: str = "DEMO-TC-2026-ALPHA"
     
     # Paths
     RISK_CONFIG_PATH: Path = CONFIG_DIR / "risk_config.yaml"
